@@ -1,9 +1,11 @@
 package main
 
+// organize the imports alphabetically
+
 import (
 	"fmt"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 func main() {

@@ -13,8 +13,8 @@ func main() {
 		fmt.Fprintf(w, "Welcome to Tower of Babel!")
 	},)
 
-	http.HandleFunc("/bases", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(bases)
+	http.HandleFunc("/base", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(bases[0])
 	})
 
 	fmt.Println("Server started on port 8080")
@@ -26,12 +26,14 @@ func main() {
 type base struct {
     ID     int  `json:"id"`
 		Name   string  `json:"name"`
-		Bases []string  `json:"bases"`
+		Sphere []int  `json:"sphere"`
+		Cube []int  `json:"cube"`
+		Cylinder []int  `json:"cylinder"`
 }
 
 var bases = []base{
-    {ID: 1, Name: "bilingual base", Bases: []string{"sphere", "rectangle", "square"}},
-    {ID: 2, Name: "idiom base", Bases: []string{"triangle", "square", "square"}},
-    {ID: 3, Name: "dialect base", Bases: []string{"square", "triangle", "rectangle"}},
+    {ID: 1, Name: "Diego's Base", Sphere: []int{4,3}, Cube: []int{2,3}, Cylinder: []int{0,1}},
+    {ID: 1, Name: "Coffee's Base", Sphere: []int{4,3}, Cube: []int{24,25}, Cylinder: []int{8,9}},
+    {ID: 1, Name: "Lucas' Base", Sphere: []int{4,3}, Cube: []int{24,25}, Cylinder: []int{8,9}},
 }
 

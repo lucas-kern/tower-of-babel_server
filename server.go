@@ -13,7 +13,7 @@ func main() {
 		fmt.Fprintf(w, "Welcome to Tower of Babel!")
 	},)
 
-	http.HandleFunc("/base", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/bases", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(bases[0])
 	})
 

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"github.com/lucas-kern/tower-of-babel_server/app/router"
 )
 
 /**TODO:
@@ -46,9 +47,9 @@ func (s *Server) Start() {
 
 func (s *Server) startHTTP() {
 	//TODO create middleware to handle this for us
-	http.HandleFunc("/", handleRoute("/"))
+	http.HandleFunc("/", router.HandleRoute("/"))
 
-	http.HandleFunc("/bases", handleRoute("/bases"))
+	http.HandleFunc("/bases", router.HandleRoute("/bases"))
 
 	//TODO: Use hostanme too
 	log.Printf("Server started on %d\n", s.HTTPPort)

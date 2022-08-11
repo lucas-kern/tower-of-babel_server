@@ -1,4 +1,4 @@
-package server
+package router
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 )
 
-func handleRoute(route string) func(w http.ResponseWriter, r *http.Request){
+func HandleRoute(route string) func(w http.ResponseWriter, r *http.Request){
 
 	//TODO merge with middleware to handle this better
 	switch route {

@@ -37,6 +37,11 @@ type Server struct {
 // using HTTPS if [Server.UseHTTPS] is true else it uses HTTP
 // It creates the database connection
 func (s *Server) Start() {
+
+	if s.Handler == nil {
+		s.Handler = router.GetRouter()
+	}
+
 	// TODO create DB connection and Routes handler
 	if s.UseHTTPS {
 		s.startHTTPS()
@@ -46,10 +51,7 @@ func (s *Server) Start() {
 }
 
 func (s *Server) startHTTP() {
-	//TODO create middleware to handle this for us
-	http.HandleFunc("/", router.HandleRoute("/"))
 
-	http.HandleFunc("/bases", router.HandleRoute("/bases"))
 
 	//TODO: Use hostanme too
 	log.Printf("Server started on %d\n", s.HTTPPort)

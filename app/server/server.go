@@ -51,8 +51,6 @@ func (s *Server) Start() {
 }
 
 func (s *Server) startHTTP() {
-
-
 	//TODO: Use hostanme too
 	log.Printf("Server started on %d\n", s.HTTPPort)
 	log.Fatal(http.ListenAndServe(s.address(), s.Handler))

@@ -35,7 +35,7 @@ func main() {
 			log.Fatal(err)
 	}
 
-	databases, err := client.ListDatabaseNames(ctx, bson.M{"name": "tower-of-babel-test1"})
+	databases, err := client.ListDatabaseNames(ctx, bson.M{"name": "tower-of-babel"})
 	if err != nil {
 			log.Fatal(err)
 	}
@@ -91,8 +91,8 @@ func main() {
 					PosY: 7,
 					PosZ: 5 }}}
 
-	collection = client.Database("tower-of-babel-test1").Collection("users")
-	client.ListDatabaseNames(ctx, bson.M{"name": "tower-of-babel-test1"})
+	collection = client.Database("tower-of-babel").Collection("users")
+	client.ListDatabaseNames(ctx, bson.M{"name": "tower-of-babel"})
 
 	b := make([]interface{}, len(sample_bases))
 	for i := range sample_bases {

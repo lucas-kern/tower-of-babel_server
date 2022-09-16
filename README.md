@@ -89,3 +89,11 @@ We will be using MongoDB community Server for development.
 
 1. Find the MongoDB Service in the console and `right click`
 1. Select `Stop`
+
+### Populate the Database
+
+1. run `go run scripts/seed-database`
+2. in mongo, run `show dbs`
+3. check for the 'tower-of-babel' instance
+
+

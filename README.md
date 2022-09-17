@@ -22,3 +22,78 @@ Read [`How to Write Go Code`](https://go.dev/doc/code) for a simple understandin
 To start the project run `go run app/main.go`
 
 Stop the server by hitting `ctrl + c`
+
+## Database
+
+We will be using MongoDB community Server for development.
+
+### Mac Instructions
+
+#### Install
+
+  1. Install [homebrew](https://brew.sh/) if you don't already have it.
+  1. Then follow the [MongoDB homebrew install instructions](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/)
+  1. Install the Community version 6.0
+
+#### Running MongoDB
+  - using a terminal `mongod --config /usr/local/etc/mongod.conf`
+    - NOTE: Will use the terminal window to print logs
+  - Run as a service `brew services start mongodb-community@6.0`
+
+#### Connecting to Mongo instance
+  
+  - Run `mongosh` in a different terminal to connect to the running instance 
+    - Opens up the Mongo shell
+
+#### Disconenct from Mongo instance
+  - Type .exit, exit, or exit().
+  - Type quit or quit().
+  - Press Ctrl + D.
+  - Press Ctrl + C twice.
+
+#### To Stop MongoDB Service
+  - hit `ctrl + c` on the service and the shell if ran in the shell
+  - run `brew services stop mongodb-community@6.0` to stop the backgroun service
+
+### Windows Instructions
+
+#### Install on Windows
+
+  1. Donwload the MSI file for the community server version 6.0 from [MongoDB](https://www.mongodb.com/try/download/community)
+  1. Follow the Installer to get it installed
+    - NOTE: Select `complete` version to ensure everything you need is installed. 
+    - Should install as a service
+  1. For more detailed instructions follow the [MongoDB instructions](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-windows/#install-mongodb-community-edition)
+  1. After installing the MongoDB Server install the mongosh shell by following the [Mongosh Install Instructions](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-windows/#install-mongodb-community-edition)
+
+#### Running MongoDB
+  1. Run `mongosh` from any terminal to connect to the default port of 27017
+    - This is equivalent to running `mongosh "mongodb://localhost:27017"`
+
+#### Disconnect from a Server
+
+  To disconnect from a deployment and exit mongosh, you can:
+
+  - Type .exit, exit, or exit().
+  - Type quit or quit().
+  - Press Ctrl + D.
+  - Press Ctrl + C twice.
+
+#### Stop MongoDB service
+
+1. Open the Windows Services Manager on your Windows 11 or Windows 10 computer, do the following:
+  - Right-click on the Start button to open the WinX Menu
+  - Select Run
+  - Type services.msc in the Run box which opens
+  - Windows Services Manager will open.
+
+1. Find the MongoDB Service in the console and `right click`
+1. Select `Stop`
+
+### Populate the Database
+
+1. run `go run scripts/seed-database`
+2. in mongo, run `show dbs`
+3. check for the 'tower-of-babel' instance
+
+

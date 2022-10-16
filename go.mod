@@ -3,8 +3,12 @@ module github.com/lucas-kern/tower-of-babel_server
 go 1.18
 
 require (
+	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
+	github.com/kidstuff/mongostore v0.0.0-20181113001930-e650cd85ee4b // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pkg/errors v0.9.1 // indirect

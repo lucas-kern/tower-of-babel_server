@@ -1,4 +1,4 @@
-package router
+package middleware
 
 
 //TODO create basic middleware wrapper

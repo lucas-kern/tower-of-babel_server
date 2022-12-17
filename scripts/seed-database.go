@@ -13,6 +13,7 @@ import (
 	"github.com/lucas-kern/tower-of-babel_server/app/model"
 )
 
+
 func main() {
 	localhost := "localhost:27017"
 	mongohost := "mongodb://" + localhost

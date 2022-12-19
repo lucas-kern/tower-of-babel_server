@@ -21,13 +21,5 @@ import (
 			json.NewEncoder(w).Encode(bases[id])
 	}
 
-// type base struct {
-//     ID     int  `json:"id"`
-// 		Name   string  `json:"name"`
-// 		Sphere []int  `json:"sphere"`
-// 		Cube []int  `json:"cube"`
-// 		Cylinder []int  `json:"cylinder"`
-// }
-
 var bases = []Base{
 }

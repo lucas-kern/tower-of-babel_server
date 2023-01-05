@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"github.com/lucas-kern/tower-of-babel_server/app/router"
+	"github.com/lucas-kern/tower-of-babel_server/app/server/session"
 	"github.com/lucas-kern/tower-of-babel_server/app/server/database"
 )
 
@@ -47,10 +48,11 @@ func (s *Server) Start() {
 		log.Fatal(err) //TODO: panic and recover
 	}
 	defer db.Close()
-	log.Print(db)
-
+	// s := session.NewMongoSessionStore(db.GetCollection("sessions"), []byte("Super-secret-from-environment-var"))
+	log.Print(s)
+	
 	if s.Handler == nil {
-		s.Handler = router.GetRouter()
+		s.Handler = router.GetRouter(db)
 	}
 
 	// TODO create DB connection and Routes handler

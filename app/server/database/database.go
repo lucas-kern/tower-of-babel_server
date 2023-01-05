@@ -4,25 +4,25 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 	
+	"github.com/lucas-kern/tower-of-babel_server/app/model"
+
 	// "github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	
 )
+
+// database is used to manage database connections
+// has important functions for connecting and using the database
 
 // Database represents the current Database connection
 type Database struct {
 	client 	*mongo.Client
-	cancel 	CancelFunc
+	databaseName string
 	url     string
-}
-
-// DatastoreSession is a session connection to the Database
-type DatastoreSession interface { //TODO: not yet used
-	Close()
-	Copy() DatastoreSession
-	DB(name string)
 }
 
 // Datastore represents a store for the data (Database session)
@@ -31,29 +31,32 @@ type Datastore struct {
 	name    string
 }
 
-func Connect(host string) (*Database, error){
-	// localhost := "localhost:27017"
-	mongohost := "mongodb://" + host
+// Connect will connect to a mongodb client 
+// returns a Database struct or an error
+func Connect() (*Database, error){
+	mongoHost := os.Getenv("MONGODB_URL")
+	databaseName := os.Getenv("MONGODB_NAME")
 
-	fmt.Print("Connecting to Host: ", host + "\n")
+	fmt.Print("Connecting to Host: ", mongoHost + "\n")
 
-	client, err := mongo.NewClient(options.Client().ApplyURI(mongohost))
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoHost))
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel() // TODO ensure that calls can still be made to DB with this deferred. Might need to store it in the struct to pass it around
+	defer cancel()
 	err = client.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
 	}
 
-	return &Database{client: client}, nil
+	return &Database{client: client, databaseName: databaseName}, nil
 }
 
+// Close will disconnect the database client connection
 func (d *Database) Close() {
 	if d.client != nil {
 		d.client.Disconnect(context.TODO())
@@ -62,3 +65,16 @@ func (d *Database) Close() {
 	log.Println("Database closed")
 }
 
+//	GetCollection gets a collection from the mongo database with name c
+//	returns the collection
+func (d *Database) GetCollection(c string) model.Collection{
+	log.Println("From Datastore: Getting collection" + c)
+	return GetMongoCollection(d.client.Database(d.databaseName).Collection(c))
+}
+
+//	GetUsers gets the user collection from the mongo database with name c
+//	returns the users collection
+func (d *Database) GetUsers() model.Collection{
+	log.Println("Retrieving Users collection")
+	return GetMongoCollection(d.client.Database(d.databaseName).Collection("users"))
+}

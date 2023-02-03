@@ -1,9 +1,10 @@
 package handlers
 
 import (
+		"encoding/json"
     "context"
     "fmt"
-    "log"
+		"log"
 
     "net/http"
     "time"
@@ -11,18 +12,17 @@ import (
 		"github.com/go-playground/validator/v10"
 		"github.com/julienschmidt/httprouter"
 
-    "github.com/lucas-kern/tower-of-babel_server/app/server/database"
+    // "github.com/lucas-kern/tower-of-babel_server/app/server/database"
 
     "github.com/lucas-kern/tower-of-babel_server/app/auth"
     "github.com/lucas-kern/tower-of-babel_server/app/model"
 
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
-    "go.mongodb.org/mongo-driver/mongo"
+    // "go.mongodb.org/mongo-driver/mongo"
     "golang.org/x/crypto/bcrypt"
 )
 
-var userCollection *mongo.Collection = database.GetUsers()
 var validate = validator.New()
 
 //HashPassword is used to encrypt the password before it is stored in the DB
@@ -49,14 +49,17 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	return check, msg
 }
 
-func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+// Sign up allows a user with a unique email address to create an account and persists the account
+func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var userCollection model.Collection = env.database.GetUsers()
+	var ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 	var user model.User
 
-	validationErr := validate.Struct(user)
-	if validationErr != nil {
-			log.Panic(validationErr)
-			return
+	//TODO ensure that we are receiving the correct structure for this endpoint.
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		log.Panic(err)
+		return
 	}
 
 	count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
@@ -66,22 +69,15 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			return
 	}
 
-
 	password := HashPassword(*user.Password)
 	user.Password = &password
 
-	count, err = userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
-	defer cancel()
-	if err != nil {
-			log.Panic(err)
-			return
-	}
-
 	if count > 0 {
-			log.Println("error: this email or phone number already exists")
+			log.Println("error: this email already exists")
 			return
 	}
 
+	//TODO ensure we are not just taking input, but are sanitizing it to improve security
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.ID = primitive.NewObjectID()
@@ -90,7 +86,7 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	user.Token = &token
 	user.Refresh_token = &refreshToken
 
-	resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
+	_, insertErr := userCollection.InsertOne(ctx, user)
 	if insertErr != nil {
 			msg := fmt.Sprintf("User item was not created")
 			log.Println(msg)
@@ -98,42 +94,42 @@ func SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	defer cancel()
 
-	json.NewEncoder(w).Encode(http.StatusOK, resultInsertionNumber)
-
+	// TODO need to create a result object that will include a body to hold items we want returned to client
+	json.NewEncoder(w).Encode(http.StatusOK)
 }
 
-//Login is the api used to get a single user
-//TODO update to use the current router
-// func Login() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-// 			var user models.User
-// 			var foundUser models.User
+//Login will allow a user to login to an account
+func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var userCollection model.Collection = env.database.GetUsers()
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	var user model.User
+	foundUser := new(model.User)
 
-// 			if err := c.BindJSON(&user); err != nil {
-// 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 					return
-// 			}
+	//TODO we don't need to panic at every failed login rather inform user it is wrong
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		log.Panic(err)
+		return
+	}
 
-// 			err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
-// 			defer cancel()
-// 			if err != nil {
-// 					c.JSON(http.StatusInternalServerError, gin.H{"error": "login or passowrd is incorrect"})
-// 					return
-// 			}
+	err = userCollection.FindOne(foundUser, ctx, bson.M{"email": user.Email})
+	defer cancel()
+	if err != nil {
+		  log.Panic(err)
+		  return
+	}
 
-// 			passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
-// 			defer cancel()
-// 			if passwordIsValid != true {
-// 					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-// 					return
-// 			}
+	passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
+	defer cancel()
+	if passwordIsValid != true {
+			log.Panic(msg)
+			return
+	}
 
-// 			token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
+	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
 
-// 			auth.UpdateAllTokens(token, refreshToken, foundUser.User_id)
+	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.User_id)
 
-// 			c.JSON(http.StatusOK, foundUser)
-
-// 	}
-// }
+	//TODO need to return the user information and tokens
+	json.NewEncoder(w).Encode(http.StatusOK)
+}

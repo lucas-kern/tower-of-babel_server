@@ -34,6 +34,7 @@ type Datastore struct {
 // Connect will connect to a mongodb client 
 // returns a Database struct or an error
 func Connect() (*Database, error){
+	// located in the env file
 	mongoHost := os.Getenv("MONGODB_URL")
 	databaseName := os.Getenv("MONGODB_NAME")
 

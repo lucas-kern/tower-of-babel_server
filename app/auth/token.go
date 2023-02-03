@@ -7,16 +7,13 @@ import (
     "os"
     "time"
 
-    // "github.com/lucas-kern/tower-of-babel_server/app/server/database"
+    "github.com/lucas-kern/tower-of-babel_server/app/model"
 
     jwt "github.com/dgrijalva/jwt-go"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
-    // "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
 )
-
-// TODO import userCollection
 
 // SignedDetails
 type SignedDetails struct {
@@ -90,7 +87,7 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 }
 
 //UpdateAllTokens renews the user tokens when they login
-func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
+func UpdateAllTokens(userCollection model.Collection, signedToken string, signedRefreshToken string, userId string) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
 	var updateObj primitive.D

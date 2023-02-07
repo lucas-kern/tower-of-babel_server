@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"github.com/lucas-kern/tower-of-babel_server/app/router"
+	"github.com/lucas-kern/tower-of-babel_server/app/server/database"
 )
 
 /**TODO:
@@ -24,7 +25,7 @@ type Server struct {
 	Handler   http.Handler
 }
 
-//TODO create server creation from 
+//TODO create server creation from config
 // New creates a new server using the [config] map
 // func (s *Server) New(config map[string]string) {
 // 	// config["o"] = "p"
@@ -37,12 +38,20 @@ type Server struct {
 // using HTTPS if [Server.UseHTTPS] is true else it uses HTTP
 // It creates the database connection
 func (s *Server) Start() {
+	var db *database.Database
+	var err error
 
+	db, err = database.Connect()
+
+	if err != nil {
+		log.Fatal(err) //TODO: panic and recover
+	}
+	defer db.Close()
+	
 	if s.Handler == nil {
-		s.Handler = router.GetRouter()
+		s.Handler = router.GetRouter(db)
 	}
 
-	// TODO create DB connection and Routes handler
 	if s.UseHTTPS {
 		s.startHTTPS()
 	} else {

@@ -20,10 +20,8 @@ type UpdateResult struct {
 // Collection represents a row of data
 type Collection interface {
 	CountDocuments(ctx context.Context, docs interface{}) (int64, error)
-	// TODO update this to return correct values
 	UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 	InsertOne(ctx context.Context, document interface{}, opts ...*options.InsertOneOptions) (primitive.ObjectID, error)
-	//TODO look into what this returns probably should not pass in variable to update
 	FindOne(doc interface{}, ctx context.Context, filter interface{},opts ...*options.FindOneOptions) error
 }
 

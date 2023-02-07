@@ -25,7 +25,7 @@ type Server struct {
 	Handler   http.Handler
 }
 
-//TODO create server creation from 
+//TODO create server creation from config
 // New creates a new server using the [config] map
 // func (s *Server) New(config map[string]string) {
 // 	// config["o"] = "p"
@@ -52,7 +52,6 @@ func (s *Server) Start() {
 		s.Handler = router.GetRouter(db)
 	}
 
-	// TODO create DB connection and Routes handler
 	if s.UseHTTPS {
 		s.startHTTPS()
 	} else {

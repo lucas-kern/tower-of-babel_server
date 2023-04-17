@@ -24,9 +24,16 @@ type User struct {
 type ClientUser struct {
 	First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
 	Last_name     *string            `json:"last_name" validate:"required,min=2,max=100"`
-	Email         *string            `json:"email" validate:"email,required"`
 	Token         *string            `json:"token"`
 	Refresh_token *string            `json:"refresh_token"`
-	User_id       string             `json:"user_id"`
 }
 
+// newUser sets up a client appropriate [model.User]
+func NewUser(user *User) *ClientUser {
+	return &ClientUser{
+		First_name:      user.First_name,
+		Last_name:       user.Last_name,
+		Token:					 user.Token,
+		Refresh_token:   user.Refresh_token,
+	}
+}

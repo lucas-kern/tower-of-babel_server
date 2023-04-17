@@ -55,17 +55,14 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	var userCollection model.Collection = env.database.GetUsers()
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	var user model.User
-	var clientUser model.ClientUser
+	var clientUser *model.ClientUser
 
 	//TODO ensure that we are receiving the correct structure for this endpoint.
-	log.Println("decoding user")
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		log.Panic(err)
 		return
 	}
-
-	log.Println("user decoded")
 
 	count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 	defer cancel()
@@ -80,11 +77,8 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 		return
 	}
 
-	log.Println("hashing the password")
 	password := HashPassword(*user.Password)
 	user.Password = &password
-
-	log.Println("password hashed")
 
 	//TODO ensure we are not just taking input, but are sanitizing it to improve security
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
@@ -101,10 +95,11 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 			log.Println(msg)
 			return
 	}
-	log.Println("user inserted")
 	defer cancel()
 
-	WriteSuccessResponse(w, user)
+	clientUser = model.NewUser(&user)
+
+	WriteSuccessResponse(w, clientUser)
 }
 
 //Login will allow a user to login to an account

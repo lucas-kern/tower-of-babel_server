@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
-	. "github.com/lucas-kern/tower-of-babel_server/app/model"
+	"github.com/lucas-kern/tower-of-babel_server/app/model"
 )
 
 // TODO remove this Index
@@ -20,5 +20,5 @@ import (
 			json.NewEncoder(w).Encode(bases[id])
 	}
 
-var bases = []Base{
+var bases = []model.Base{
 }

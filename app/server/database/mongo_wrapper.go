@@ -29,6 +29,7 @@ func (c MongoCollection) UpdateOne(ctx context.Context, filter interface{}, upda
 // Makes a call to mongodb to insert one document
 func (c MongoCollection) InsertOne(ctx context.Context, document interface{}, opts ...*options.InsertOneOptions) (primitive.ObjectID, error){
 	result, err := c.Collection.InsertOne(ctx, document, opts...)
+	// TODO check error and return if there is one here
 	newID := result.InsertedID
 	// If this ever changes in mongo to not be an objectID this will break
 	return newID.(primitive.ObjectID), err

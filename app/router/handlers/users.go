@@ -42,7 +42,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	msg := ""
 
 	if err != nil {
-			msg = fmt.Sprintf("login or passowrd is incorrect")
+			msg = fmt.Sprintf("username or passowrd is incorrect")
 			check = false
 	}
 
@@ -50,32 +50,41 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 }
 
 // Sign up allows a user with a unique email address to create an account and persists the account
+//TODO error where if we signup with an email already in use then try again it throws a runtime error
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-	var ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	var user model.User
+	var clientUser model.ClientUser
 
 	//TODO ensure that we are receiving the correct structure for this endpoint.
+	log.Println("decoding user")
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		log.Panic(err)
 		return
 	}
 
+	log.Println("user decoded")
+
 	count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 	defer cancel()
+	// TODO don't panic here
 	if err != nil {
 			log.Panic(err)
 			return
 	}
 
+	if count > 0 {
+		log.Println("error: this email already exists")
+		return
+	}
+
+	log.Println("hashing the password")
 	password := HashPassword(*user.Password)
 	user.Password = &password
 
-	if count > 0 {
-			log.Println("error: this email already exists")
-			return
-	}
+	log.Println("password hashed")
 
 	//TODO ensure we are not just taking input, but are sanitizing it to improve security
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
@@ -92,10 +101,10 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 			log.Println(msg)
 			return
 	}
+	log.Println("user inserted")
 	defer cancel()
 
-	// TODO need to create a result object that will include a body to hold items we want returned to client
-	json.NewEncoder(w).Encode(http.StatusOK)
+	WriteSuccessResponse(w, user)
 }
 
 //Login will allow a user to login to an account

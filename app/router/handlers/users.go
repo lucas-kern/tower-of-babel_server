@@ -12,14 +12,11 @@ import (
 		"github.com/go-playground/validator/v10"
 		"github.com/julienschmidt/httprouter"
 
-    // "github.com/lucas-kern/tower-of-babel_server/app/server/database"
-
     "github.com/lucas-kern/tower-of-babel_server/app/auth"
     "github.com/lucas-kern/tower-of-babel_server/app/model"
 
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
-    // "go.mongodb.org/mongo-driver/mongo"
     "golang.org/x/crypto/bcrypt"
 )
 
@@ -54,7 +51,6 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
 	var user model.User
-	var clientUser *model.ClientUser
 	// TODO make this method faster if possible
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -92,7 +88,7 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	password := HashPassword(*user.Password)
 	user.Password = &password
 
-	//TODO ensure we are not just taking input, but are sanitizing it to improve security
+	//TODO sanitize input before inserting into DB to avoid NoSQL injection
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.ID = primitive.NewObjectID()
@@ -135,6 +131,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
+		//TODO sanitize input before Finding in DB to avoid NoSQL injection
 	err = userCollection.FindOne(foundUser, ctx, bson.M{"email": user.Email})
 	defer cancel()
 	if err != nil {

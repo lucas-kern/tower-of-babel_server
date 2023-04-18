@@ -109,10 +109,7 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 	defer cancel()
 
-	// TODO don't return a clientuser here, but instead just success
-	clientUser = model.NewUser(&user)
-
-	WriteSuccessResponse(w, clientUser)
+	WriteSuccessResponse(w, "Account created successfully")
 }
 
 //Login will allow a user to login to an account

@@ -42,7 +42,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	msg := ""
 
 	if err != nil {
-			msg = fmt.Sprintf("username or passowrd is incorrect")
+			msg = fmt.Sprintf("The username or password is incorrect")
 			check = false
 	}
 
@@ -50,19 +50,26 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 }
 
 // Sign up allows a user with a unique email address to create an account and persists the account
-//TODO error where if we signup with an email already in use then try again it throws a runtime error
+// TODO see what code is repeated with login and make external function for it
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	var user model.User
 	var clientUser *model.ClientUser
-
+	// TODO make this method faster if possible
+	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	//TODO ensure that we are receiving the correct structure for this endpoint.
+
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
+		return
+	}
+
+	err = validate.Struct(user)
+	if err != nil {
+		log.Println(err)
+		WriteErrorResponse(w, 400, "There was an error with user validation")
 		return
 	}
 
@@ -76,7 +83,8 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 
 	if count > 0 {
 		log.Println("error: this email already exists")
-		// TODO update this message to the latest security standard of whether it is safe to let users know the email has an account.
+		// TODO update with email responses like described here
+		// https://security.stackexchange.com/questions/51856/e-mail-already-in-use-exploit
 		WriteErrorResponse(w, 401, "There was an error registering this account")
 		return
 	}
@@ -101,6 +109,7 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 	defer cancel()
 
+	// TODO don't return a clientuser here, but instead just success
 	clientUser = model.NewUser(&user)
 
 	WriteSuccessResponse(w, clientUser)
@@ -109,15 +118,23 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 //Login will allow a user to login to an account
 func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	var user model.User
-	foundUser := new(model.User)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
+
+	foundUser := new(model.User)
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
+		return
+	}
+
+	err = validate.Struct(user)
+	if err != nil {
+		log.Println(err)
+		WriteErrorResponse(w, 400, "There was an error with user validation")
 		return
 	}
 

@@ -38,6 +38,5 @@ func WriteErrorResponse(w http.ResponseWriter, errorCode int, errorMsg string){
 	log.Println("There was an error with the request")
 }
 
-// TODO implement the Error response in user handler.
-// TODO Create a ClientUser model to wrap the user to send to the client.
+// TODO sanitize the input of the user handlers
 // TODO test with frontend

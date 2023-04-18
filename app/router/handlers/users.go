@@ -57,23 +57,27 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	var user model.User
 	var clientUser *model.ClientUser
 
+	defer cancel()
 	//TODO ensure that we are receiving the correct structure for this endpoint.
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err)
+		WriteErrorResponse(w, 422, "There was an error with the client request")
 		return
 	}
 
 	count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 	defer cancel()
-	// TODO don't panic here
 	if err != nil {
-			log.Panic(err)
+			log.Println(err)
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
 			return
 	}
 
 	if count > 0 {
 		log.Println("error: this email already exists")
+		// TODO update this message to the latest security standard of whether it is safe to let users know the email has an account.
+		WriteErrorResponse(w, 401, "There was an error registering this account")
 		return
 	}
 
@@ -91,8 +95,8 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 
 	_, insertErr := userCollection.InsertOne(ctx, user)
 	if insertErr != nil {
-			msg := fmt.Sprintf("User item was not created")
-			log.Println(msg)
+			log.Println("User item was not created")
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
 			return
 	}
 	defer cancel()
@@ -108,32 +112,36 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	var user model.User
 	foundUser := new(model.User)
+	defer cancel()
 
-	//TODO we don't need to panic at every failed login rather inform user it is wrong
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err)
+		WriteErrorResponse(w, 422, "There was an error with the client request")
 		return
 	}
 
 	err = userCollection.FindOne(foundUser, ctx, bson.M{"email": user.Email})
 	defer cancel()
 	if err != nil {
-		  log.Panic(err)
-		  return
+			log.Println(err)
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
+			return
 	}
 
 	passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
 	defer cancel()
 	if passwordIsValid != true {
-			log.Panic(msg)
-			return
+		log.Println(msg)
+		WriteErrorResponse(w, 401, "The username or password is incorrect")
+		return
 	}
 
 	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.User_id)
 
-	//TODO need to return the user information and tokens
-	json.NewEncoder(w).Encode(http.StatusOK)
+	clientUser := model.NewUser(&user)
+
+	WriteSuccessResponse(w, clientUser)
 }

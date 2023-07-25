@@ -1,13 +1,18 @@
 package handlers
 
 import (
+
+		"io"
+		// "bytes"
+
 		"encoding/json"
     "context"
     "fmt"
 		"log"
 
     "net/http"
-    "time"
+		"net/url"
+		"time"
 
 		"github.com/go-playground/validator/v10"
 		"github.com/julienschmidt/httprouter"
@@ -55,11 +60,25 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := json.NewDecoder(r.Body).Decode(&user)
+	// Read the request body into a byte slice
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+			http.Error(w, "Error reading request body", http.StatusBadRequest)
+			return
+	}
+
+	// Decode the URL-encoded data
+	decodedData, err := url.QueryUnescape(string(b))
+	if err != nil {
+			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
+			return
+	}
+
+	err = json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
-		return
+		return 
 	}
 
 	err = validate.Struct(user)
@@ -109,22 +128,40 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 }
 
 //Login will allow a user to login to an account
+//TODO only require email and password to login
 func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
 	var user model.User
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
+	// Read the request body into a byte slice
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+			http.Error(w, "Error reading request body", http.StatusBadRequest)
+			return
+	}
+
+	// Decode the URL-encoded data
+	decodedData, err := url.QueryUnescape(string(b))
+	if err != nil {
+			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
+			return
+	}
+
+	// Now you have the decoded JSON data as a string
+	fmt.Println("Decoded JSON data:", decodedData)
+
 	foundUser := new(model.User)
 
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err = json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
 		return
 	}
 
-	err = validate.Struct(user)
+	err = validate.Var(user.Email, "required,email")
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 400, "There was an error with user validation")

@@ -21,8 +21,9 @@ func NewHandlerEnv(db *database.Database) *HandlerEnv {
 	}
 }
 
+// WriteSuccessResponse Write a successful response to a writer 
 func WriteSuccessResponse(w http.ResponseWriter, d interface{}){
-	w.Header().Set("Content-Type", "application/json; cahrset=UTF-8")
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(&model.Response{Data:d}); err != nil {
 		WriteErrorResponse(w, http.StatusInternalServerError, "Internal Server Error")
@@ -31,12 +32,10 @@ func WriteSuccessResponse(w http.ResponseWriter, d interface{}){
 	log.Println("Request was a success")
 }
 
+// WriteErrorResponse writes an error code and message to a writer
 func WriteErrorResponse(w http.ResponseWriter, errorCode int, errorMsg string){
-	w.Header().Set("Content-Type", "application/json; cahrset=UTF-8")
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(errorCode)
 	json.NewEncoder(w).Encode(model.ErrorResponse{Status: errorCode, Name: errorMsg})
 	log.Println("There was an error with the request")
 }
-
-// TODO sanitize the input of the user handlers
-// TODO test with frontend

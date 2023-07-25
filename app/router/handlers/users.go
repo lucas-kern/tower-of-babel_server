@@ -53,6 +53,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 
 // Sign up allows a user with a unique email address to create an account and persists the account
 // TODO see what code is repeated with login and make external function for it
+// TODO send a confirmation email when user signs up
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
 	var user model.User
@@ -128,7 +129,6 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 }
 
 //Login will allow a user to login to an account
-//TODO only require email and password to login
 func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
 	var user model.User

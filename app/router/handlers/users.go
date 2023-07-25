@@ -1,25 +1,27 @@
 package handlers
 
 import (
+
+		"io"
+		// "bytes"
+
 		"encoding/json"
     "context"
     "fmt"
 		"log"
 
     "net/http"
-    "time"
+		"net/url"
+		"time"
 
 		"github.com/go-playground/validator/v10"
 		"github.com/julienschmidt/httprouter"
-
-    // "github.com/lucas-kern/tower-of-babel_server/app/server/database"
 
     "github.com/lucas-kern/tower-of-babel_server/app/auth"
     "github.com/lucas-kern/tower-of-babel_server/app/model"
 
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
-    // "go.mongodb.org/mongo-driver/mongo"
     "golang.org/x/crypto/bcrypt"
 )
 
@@ -42,7 +44,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	msg := ""
 
 	if err != nil {
-			msg = fmt.Sprintf("login or passowrd is incorrect")
+			msg = fmt.Sprintf("The username or password is incorrect")
 			check = false
 	}
 
@@ -50,34 +52,63 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 }
 
 // Sign up allows a user with a unique email address to create an account and persists the account
+// TODO see what code is repeated with login and make external function for it
+// TODO send a confirmation email when user signs up
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-	var ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 	var user model.User
+	// TODO make this method faster if possible
+	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
-	//TODO ensure that we are receiving the correct structure for this endpoint.
-	err := json.NewDecoder(r.Body).Decode(&user)
+	// Read the request body into a byte slice
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Panic(err)
+			http.Error(w, "Error reading request body", http.StatusBadRequest)
+			return
+	}
+
+	// Decode the URL-encoded data
+	decodedData, err := url.QueryUnescape(string(b))
+	if err != nil {
+			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
+			return
+	}
+
+	err = json.Unmarshal([]byte(decodedData), &user)
+	if err != nil {
+		log.Println(err)
+		WriteErrorResponse(w, 422, "There was an error with the client request")
+		return 
+	}
+
+	err = validate.Struct(user)
+	if err != nil {
+		log.Println(err)
+		WriteErrorResponse(w, 400, "There was an error with user validation")
 		return
 	}
 
 	count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 	defer cancel()
 	if err != nil {
-			log.Panic(err)
+			log.Println(err)
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
 			return
+	}
+
+	if count > 0 {
+		log.Println("error: this email already exists")
+		// TODO update with email responses like described here
+		// https://security.stackexchange.com/questions/51856/e-mail-already-in-use-exploit
+		WriteErrorResponse(w, 401, "There was an error registering this account")
+		return
 	}
 
 	password := HashPassword(*user.Password)
 	user.Password = &password
 
-	if count > 0 {
-			log.Println("error: this email already exists")
-			return
-	}
-
-	//TODO ensure we are not just taking input, but are sanitizing it to improve security
+	//TODO sanitize input before inserting into DB to avoid NoSQL injection
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.ID = primitive.NewObjectID()
@@ -88,48 +119,77 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 
 	_, insertErr := userCollection.InsertOne(ctx, user)
 	if insertErr != nil {
-			msg := fmt.Sprintf("User item was not created")
-			log.Println(msg)
+			log.Println("User item was not created")
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
 			return
 	}
 	defer cancel()
 
-	// TODO need to create a result object that will include a body to hold items we want returned to client
-	json.NewEncoder(w).Encode(http.StatusOK)
+	WriteSuccessResponse(w, "Account created successfully")
 }
 
 //Login will allow a user to login to an account
 func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	var user model.User
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	// Read the request body into a byte slice
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+			http.Error(w, "Error reading request body", http.StatusBadRequest)
+			return
+	}
+
+	// Decode the URL-encoded data
+	decodedData, err := url.QueryUnescape(string(b))
+	if err != nil {
+			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
+			return
+	}
+
+	// Now you have the decoded JSON data as a string
+	fmt.Println("Decoded JSON data:", decodedData)
+
 	foundUser := new(model.User)
 
-	//TODO we don't need to panic at every failed login rather inform user it is wrong
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err = json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err)
+		WriteErrorResponse(w, 422, "There was an error with the client request")
 		return
 	}
 
+	err = validate.Var(user.Email, "required,email")
+	if err != nil {
+		log.Println(err)
+		WriteErrorResponse(w, 400, "There was an error with user validation")
+		return
+	}
+
+		//TODO sanitize input before Finding in DB to avoid NoSQL injection
 	err = userCollection.FindOne(foundUser, ctx, bson.M{"email": user.Email})
 	defer cancel()
 	if err != nil {
-		  log.Panic(err)
-		  return
+			log.Println(err)
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
+			return
 	}
 
 	passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
 	defer cancel()
 	if passwordIsValid != true {
-			log.Panic(msg)
-			return
+		log.Println(msg)
+		WriteErrorResponse(w, 401, "The username or password is incorrect")
+		return
 	}
 
 	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.User_id)
 
-	//TODO need to return the user information and tokens
-	json.NewEncoder(w).Encode(http.StatusOK)
+	clientUser := model.NewUser(&user)
+
+	WriteSuccessResponse(w, clientUser)
 }

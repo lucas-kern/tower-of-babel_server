@@ -56,6 +56,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 // TODO send a confirmation email when user signs up
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
+	var baseCollection model.Collection = env.database.GetBases()
 	var user model.User
 	// TODO make this method faster if possible
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
@@ -125,12 +126,23 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 	defer cancel()
 
+	base := model.NewBase(user.ID)
+	_, insertErr = baseCollection.InsertOne(ctx, base)
+	if insertErr != nil {
+			log.Println("Base item was not created")
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
+			return
+	}
+	defer cancel()
+
 	WriteSuccessResponse(w, "Account created successfully")
 }
 
+// TODO move all the DB stuff to the model so we don't need to repeat code to get Users? Not sure what the golang standard here is 
 //Login will allow a user to login to an account
 func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
+	var baseCollection model.Collection = env.database.GetBases()
 	var user model.User
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
@@ -153,6 +165,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 	fmt.Println("Decoded JSON data:", decodedData)
 
 	foundUser := new(model.User)
+	foundUserBase := new(model.Base)
 
 	err = json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
@@ -189,7 +202,16 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.User_id)
 
-	clientUser := model.NewUser(&user)
+	err = baseCollection.FindOne(foundUserBase, ctx, bson.M{"owner": foundUser.ID})
+	defer cancel()
+	if err != nil {
+			log.Println(err)
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
+			return
+	}
+
+	clientUser := model.NewUser(foundUser)
+	clientUser.Base = *foundUserBase
 
 	WriteSuccessResponse(w, clientUser)
 }

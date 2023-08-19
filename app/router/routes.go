@@ -14,7 +14,7 @@ func GetRouter(db *database.Database) *httprouter.Router{
 	router := httprouter.New()
 	router.GET("/", EnvHandler.Index)
 	router.GET("/bases/:id", middleware.Authentication(EnvHandler.Bases))
-	router.POST("/users/signup", EnvHandler.SignUp)
+	router.POST("/users/Register", EnvHandler.SignUp)
 	router.POST("/users/login", EnvHandler.Login)
 	return router
 }

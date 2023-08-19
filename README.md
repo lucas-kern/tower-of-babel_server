@@ -36,6 +36,7 @@ We will be using MongoDB community Server for development.
   1. Install the Community version 6.0
 
 #### Running MongoDB
+  - EXPORT ENV VARIABLES FIRST
   - using a terminal `mongod --config /usr/local/etc/mongod.conf`
     - NOTE: Will use the terminal window to print logs
   - Run as a service `brew services start mongodb-community@6.0`

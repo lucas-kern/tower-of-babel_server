@@ -11,7 +11,7 @@ import (
 )
 
 // A middleware that will take a token from the header and ensure this user is valid
-// AuAuthenticationth validates token and authorizes users
+// AuAuthentication validates token and authorizes users
 func Authentication(n httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
         clientToken := r.Header.Get("token")

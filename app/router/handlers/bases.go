@@ -3,8 +3,8 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"encoding/json"
-	"strconv"
+	// "encoding/json"
+	// "strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/lucas-kern/tower-of-babel_server/app/model"
@@ -15,9 +15,10 @@ import (
 		fmt.Fprintf(w, "Welcome to Tower of Babel!")
 	}
 	func (env *HandlerEnv) Bases(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-			id, err := strconv.Atoi(params.ByName("id"))
-			if err != nil {return};
-			json.NewEncoder(w).Encode(bases[id])
+			// id, err := strconv.Atoi(params.ByName("id"))
+			// if err != nil {return};
+			// json.NewEncoder(w).Encode(bases[id])
+			WriteSuccessResponse(w, true)
 	}
 
 var bases = []model.Base{

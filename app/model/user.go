@@ -7,6 +7,7 @@ import (
 )
 
 //User is the model that governs all account objects retrieved or inserted into the DB
+//TODO add back the bson
 type User struct {
     ID            primitive.ObjectID `bson:"_id"`
     First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
@@ -22,11 +23,12 @@ type User struct {
 
 //ClientUser is the model that governs all account objects retrieved or inserted into the DB
 type ClientUser struct {
-	First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
-	Last_name     *string            `json:"last_name" validate:"required,min=2,max=100"`
-	Token         *string            `json:"token"`
-    Refresh_token *string            `json:"refresh_token"`
-    Base          Base               `json:"Base,omitempty"`
+    User_id       string             `json:"user_id"`
+	First_name    *string            `json:"first_name,omitempty"`
+	Last_name     *string            `json:"last_name,omitempty"`
+	Token         *string            `json:"token,omitempty"`
+    Refresh_token *string            `json:"refresh_token,omitempty"`
+    Base          *Base               `json:"Base,omitempty"`
 }
 
 // newUser sets up a client appropriate [model.User]

@@ -19,6 +19,8 @@ Read [`How to Write Go Code`](https://go.dev/doc/code) for a simple understandin
 
 ### Starting the project
 
+EXPORT ENV VARIABLES FIRST
+
 To start the project run `go run app/main.go`
 
 Stop the server by hitting `ctrl + c`

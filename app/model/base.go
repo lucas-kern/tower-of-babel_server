@@ -24,7 +24,7 @@ type Building struct {
 
 // Base represents a base owned by [User]s
 type Base struct {
-	ID          primitive.ObjectID `bson:"_id"`
+	ID          primitive.ObjectID `json:"id,omitempty" bson:"_id"`
 	Owner       primitive.ObjectID `json:"owner,omitempty" bson:"owner,omitempty"`
 	Buildings   []Building         `json:"buildings,omitempty" bson:"buildings,omitempty"`
 }

@@ -211,7 +211,35 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 	}
 
 	clientUser := model.NewUser(foundUser)
-	clientUser.Base = *foundUserBase
+	clientUser.Base = foundUserBase
 
 	WriteSuccessResponse(w, clientUser)
+}
+
+func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var userCollection model.Collection = env.database.GetUsers()
+		clientToken := r.Header.Get("refresh_token")
+		if clientToken == "" {
+				log.Printf("There is no refresh token")
+
+				return
+		}
+
+		claims, err := auth.ValidateToken(clientToken)
+		if err != "" {
+				log.Panic(err)
+				return
+		}
+		
+		token, refreshToken, _ := auth.GenerateAllTokens(claims.Email, claims.First_name, claims.Last_name, claims.Uid)
+
+		auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
+
+		//TODO this works, but we don't need to send the user data back every time we authenticate
+		var user model.ClientUser
+		user.User_id = claims.Uid
+		user.Refresh_token = &refreshToken
+		user.Token = &token
+
+		WriteSuccessResponse(w, user)
 }

@@ -11,15 +11,16 @@ import (
 )
 
 // A middleware that will take a token from the header and ensure this user is valid
-// AuAuthentication validates token and authorizes users
+// Authentication validates token and authorizes users
+//TODO add a method for refreshing the token
 func Authentication(n httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-        clientToken := r.Header.Get("token")
+        clientToken := r.Header.Get("Authorization")
         if clientToken == "" {
-						log.Printf("There is no token")
+						log.Printf("There is no authorization token")
 
             return
-        }
+				}
 
         claims, err := auth.ValidateToken(clientToken)
         if err != "" {

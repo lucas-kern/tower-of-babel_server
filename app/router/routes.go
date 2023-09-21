@@ -2,7 +2,6 @@ package router
 
 import (
 	"github.com/lucas-kern/tower-of-babel_server/app/router/handlers"
-	"github.com/lucas-kern/tower-of-babel_server/app/router/middleware"
 	"github.com/lucas-kern/tower-of-babel_server/app/server/database"
 	"github.com/julienschmidt/httprouter"
 )
@@ -13,9 +12,8 @@ import (
 func GetRouter(db *database.Database) *httprouter.Router{
 	EnvHandler := handlers.NewHandlerEnv(db)
 	router := httprouter.New()
-	router.GET("/", EnvHandler.Index)
-	router.GET("/bases/:id", middleware.Authentication(EnvHandler.Bases))
-	router.POST("/bases/:id", middleware.Authentication(EnvHandler.Bases))
+	router.GET("/bases/:id", EnvHandler.Authentication(EnvHandler.Bases))
+	router.POST("/bases/:id", EnvHandler.Authentication(EnvHandler.Bases))
 	router.POST("/users/signup", EnvHandler.SignUp)
 	router.POST("/users/login", EnvHandler.Login)
 	router.POST("/token", EnvHandler.TokenRefresh)

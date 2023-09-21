@@ -1,7 +1,7 @@
-package middleware
+package handlers
 
 import (
-		"encoding/json"
+    "context"
 		"log"
     "net/http"
 
@@ -11,9 +11,9 @@ import (
 )
 
 // A middleware that will take a token from the header and ensure this user is valid
-// Authentication validates token and authorizes users
-//TODO add a method for refreshing the token
-func Authentication(n httprouter.Handle) httprouter.Handle {
+// Authentication validates token
+func (env *HandlerEnv) Authentication(n httprouter.Handle) httprouter.Handle {
+	var userCollection model.Collection = env.database.GetUsers()
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
         clientToken := r.Header.Get("Authorization")
         if clientToken == "" {
@@ -22,21 +22,19 @@ func Authentication(n httprouter.Handle) httprouter.Handle {
             return
 				}
 
-        claims, err := auth.ValidateToken(clientToken)
+        claims, err := auth.ValidateToken(userCollection, clientToken)
         if err != "" {
 						log.Panic(err)
             return
-        }
+				}
+				
+        // Store the claims in the request context
+        ctx := context.WithValue(r.Context(), "claims", claims)
 
-				//TODO this works, but we don't need to send the user data back every time we authenticate
-				var user model.User
-				user.Email = &claims.Email
-				user.First_name = &claims.First_name
-				user.Last_name = &claims.Last_name
-				user.User_id = claims.Uid
+        // Create a new request with the updated context
+        r = r.WithContext(ctx)
 
-				json.NewEncoder(w).Encode(user)
-
-				n(w, r, ps)
+        // Call the next handler with the updated request
+        n(w, r, ps)
     }
 }

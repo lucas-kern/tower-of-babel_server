@@ -56,7 +56,11 @@ func GenerateAllTokens(email string, firstName string, lastName string, uid stri
 }
 
 //ValidateToken validates the jwt token
-func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
+func ValidateToken(userCollection model.Collection, signedToken string) (claims *SignedDetails, msg string) {
+	foundUser := new(model.User)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
 	token, err := jwt.ParseWithClaims(
 			signedToken,
 			&SignedDetails{},
@@ -81,6 +85,18 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 			msg = fmt.Sprintf("token is expired")
 			msg = err.Error()
 			return
+	}
+	
+	//Check that user from token matches the one in DB
+	err = userCollection.FindOne(foundUser, ctx, bson.M{"user_id": claims.Uid})
+	if err != nil {
+		msg = "error fetching user from the database"
+		return
+	}
+
+	if foundUser == nil {
+		msg = "user not found in the database"
+		return
 	}
 
 	return claims, msg

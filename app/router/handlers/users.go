@@ -113,8 +113,7 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.ID = primitive.NewObjectID()
-	user.User_id = user.ID.Hex()
-	token, refreshToken, _ := auth.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, user.User_id)
+	token, refreshToken, _ := auth.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, user.ID.Hex())
 	user.Token = &token
 	user.Refresh_token = &refreshToken
 
@@ -198,9 +197,9 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
-	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
+	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.ID.Hex())
 
-	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.User_id)
+	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.ID.Hex())
 
 	err = baseCollection.FindOne(foundUserBase, ctx, bson.M{"owner": foundUser.ID})
 	defer cancel()
@@ -218,28 +217,28 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 
 func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-		clientToken := r.Header.Get("refresh_token")
-		if clientToken == "" {
-				log.Printf("There is no refresh token")
+	clientToken := r.Header.Get("refresh_token")
+	if clientToken == "" {
+			log.Printf("There is no refresh token")
 
-				return
-		}
+			return
+	}
 
-		claims, err := auth.ValidateToken(clientToken)
-		if err != "" {
-				log.Panic(err)
-				return
-		}
-		
-		token, refreshToken, _ := auth.GenerateAllTokens(claims.Email, claims.First_name, claims.Last_name, claims.Uid)
+	claims, err := auth.ValidateToken(userCollection, clientToken)
+	if err != "" {
+			log.Panic(err)
+			return
+	}
+	
+	token, refreshToken, _ := auth.GenerateAllTokens(claims.Email, claims.First_name, claims.Last_name, claims.Uid)
 
-		auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
+	auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
 
-		//TODO this works, but we don't need to send the user data back every time we authenticate
-		var user model.ClientUser
-		user.User_id = claims.Uid
-		user.Refresh_token = &refreshToken
-		user.Token = &token
+	//TODO this works, but we don't need to send the user data back every time we authenticate
+	// TODO remove client ID from client user since it is stored in the token which will improve security so it can't be changed 
+	var user model.ClientUser
+	user.Refresh_token = &refreshToken
+	user.Token = &token
 
-		WriteSuccessResponse(w, user)
+	WriteSuccessResponse(w, user)
 }

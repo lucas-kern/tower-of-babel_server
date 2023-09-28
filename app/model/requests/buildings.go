@@ -1,20 +1,25 @@
 package model
 
 import (
-	// "fmt"
-	// "log"
-	// "math/rand"
-	// "time"
-
-	// "go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/go-playground/validator/v10"
 )
 
 // Building represents a simple building with location
 type BuildingPlacement struct {
-	Name			string		`json:"name,omitempty" bson:"name,omitempty"`
-	PosX			float64 	`json:"posX" bson:"posX"`
-	PosY			float64 	`json:"posY" bson:"posY"`
-	PosZ			float64 	`json:"posZ" bson:"posZ"`
-	Width 		float64		`json:"width,omitempty" bson:"width,omitempty"`
-	Height 		float64		`json:"height,omitempty" bson:"height,omitempty"`
+	Name   string  `json:"name,omitempty" bson:"name,omitempty" validate:"required,min=2,max=100"`
+	PosX   float64 `json:"posX" bson:"posX" validate:"required"`
+	PosY   float64 `json:"posY" bson:"posY" validate:"required"`
+	Width  float64 `json:"width,omitempty" bson:"width,omitempty" validate:"required,gte=1"`
+	Height float64 `json:"height,omitempty" bson:"height,omitempty" validate:"required,gte=1"`
+}
+
+// ValidateBuildingPlacement validates a BuildingPlacement struct
+func ValidateBuildingPlacement(bp *BuildingPlacement) error {
+	validate := validator.New()
+
+	if err := validate.Struct(bp); err != nil {
+		return err
+	}
+
+	return nil
 }

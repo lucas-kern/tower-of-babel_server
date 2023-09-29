@@ -8,7 +8,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
     "github.com/lucas-kern/tower-of-babel_server/app/model/requests"
-    "github.com/lucas-kern/tower-of-babel_server/app/auth"
 )
 
 func (env *HandlerEnv) Bases(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -18,6 +17,7 @@ func (env *HandlerEnv) Bases(w http.ResponseWriter, r *http.Request, params http
         WriteSuccessResponse(w, true)
 }
 
+// TODO finish this method
 // Function to place a building in a base
 func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     // How to access the "claims" object so the user properties from the auth token

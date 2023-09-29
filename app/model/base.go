@@ -10,24 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-//TODO extend buildings for each building type (storage, mines, etc...) Then replace the current base struct with arrays of those types so we can just go through each array in order to place all the buildings of that type.
-
-// Building represents a simple building with location
-type Building struct {
-	Name			string		`json:"name,omitempty" bson:"name,omitempty"`
-	IsPlaced 	bool			`json:"isPlaced" bson:"isPlaced"`
-	PosX			float64 	`json:"posX" bson:"posX"`
-	PosY			float64 	`json:"posY" bson:"posY"`
-	PosZ			float64 	`json:"posZ" bson:"posZ"`
-	Width 		float64		`json:"width,omitempty" bson:"width,omitempty"`
-	Height 		float64		`json:"height,omitempty" bson:"height,omitempty"`
-}
-
-// Equal checks if two Building instances are equal.
-func (b *Building) Equal(other *Building) bool {
-	// Compare all relevant fields for equality
-	return b.Name == other.Name && b.PosX == other.PosX && b.PosY == other.PosY && b.Width == other.Width && b.Height == other.Height
-}
+// Manages the base structs and methods 
 
 // Base represents a base owned by [User]s
 type Base struct {
@@ -68,6 +51,8 @@ func NewBase(user_id primitive.ObjectID) *Base {
 	base := &Base{
 		ID:        primitive.NewObjectID(),
 		Owner:     user_id,
+		Grid: 		 grid,
+		Buildings: make(map[string][]Building),
 	}
 
 	// Add the tower to the building
@@ -76,17 +61,11 @@ func NewBase(user_id primitive.ObjectID) *Base {
 		log.Panic(err)
 	}
 
-	// Place the tower in the grid
-	err = base.placeBuildingOnGrid(&tower)
-	if err != nil {
-		log.Panic(err)
-	}
-
 	return base
 }
 
 // Validate that the building is able to be placed
-func (base *Base) validateBuildingPlacement(building *Building) error {
+func (base *Base) ValidateBuildingPlacement(building *Building) error {
 	gridSizeX := len(base.Grid[0])
 	gridSizeY := len(base.Grid)
 
@@ -115,6 +94,48 @@ func (base *Base) validateBuildingPlacement(building *Building) error {
 			}
 	}
 
+	return nil
+}
+
+// Add a Building to the base
+func (base *Base) AddBuildingToBase(building *Building) error {
+	if err := base.ValidateBuildingPlacement(building); err != nil {
+		return err
+	}
+
+	err := base.addToBuildings(building)
+	if err != nil {
+		return err
+	}
+
+	err = base.placeBuildingOnGrid(building)
+	if err != nil {
+		base.removeFromBuildings(building)
+		return err
+	}
+
+	building.IsPlaced = true
+	return nil
+}
+
+// Remove a Building from the base
+func (base *Base) RemoveBuildingFromBase(building *Building) error {
+	if err := base.ValidateBuildingPlacement(building); err != nil {
+		return err
+	}
+
+	err := base.removeFromBuildings(building)
+	if err != nil {
+		return err
+	}
+
+	err = base.removeBuildingFromGrid(building)
+	if err != nil {
+		base.addToBuildings(building)
+		return err
+	}
+
+	building.IsPlaced = true
 	return nil
 }
 
@@ -160,6 +181,7 @@ func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) error {
 func (base *Base) addToBuildings(newBuilding *Building) error {
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(newBuilding.Name)
+	
 	if existingBuildings, ok := base.Buildings[buildingType]; ok {
 			// If the building type exists, append the new building to the existing slice
 			base.Buildings[buildingType] = append(existingBuildings, *newBuilding)
@@ -185,50 +207,6 @@ func (base *Base) removeFromBuildings(buildingToRemove *Building) error {
 		}
 	}
 
-	return nil
-}
-
-// Add a Building to the base
-//TODO finish this and test it 
-func (base *Base) AddBuildingToBase(building *Building) error {
-	if err := base.validateBuildingPlacement(building); err != nil {
-		return err
-	}
-
-	err := base.addToBuildings(building)
-	if err != nil {
-		return err
-	}
-
-	err = base.placeBuildingOnGrid(building)
-	if err != nil {
-		base.removeFromBuildings(building)
-		return err
-	}
-
-	building.IsPlaced = true
-	return nil
-}
-
-// Remove a Building from the base
-//TODO finish this and test it 
-func (base *Base) RemoveBuildingFromBase(building *Building) error {
-	if err := base.validateBuildingPlacement(building); err != nil {
-		return err
-	}
-
-	err := base.removeFromBuildings(building)
-	if err != nil {
-		return err
-	}
-
-	err = base.removeBuildingFromGrid(building)
-	if err != nil {
-		base.addToBuildings(building)
-		return err
-	}
-
-	building.IsPlaced = true
 	return nil
 }
 

@@ -99,4 +99,10 @@ We will be using MongoDB community Server for development.
 2. in mongo, run `show dbs`
 3. check for the 'tower-of-babel' instance
 
+## Testing
 
+1. Tests go in the `tests` directory
+1. Follow the direcotry structure of the file you are testing and add `_test.go` to the name of the file
+  * ex) If you are testing `app/model/base` then the test directory should be `tests/model/base_test`
+1. To run the tests run `go test ./tests/*`
+  * Could run a specific test file by giving the direct path to test

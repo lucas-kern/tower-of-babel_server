@@ -1,8 +1,12 @@
 package model
 
+import (
+	"github.com/lucas-kern/tower-of-babel_server/app/model/requests"
+)
 // Manages the building struct and methods 
 
 // Building represents a simple building with location
+// TODO get rid of IsPlaced
 type Building struct {
 	Name			string		`json:"name,omitempty" bson:"name,omitempty"`
 	IsPlaced 	bool			`json:"isPlaced" bson:"isPlaced"`
@@ -11,6 +15,18 @@ type Building struct {
 	PosZ			float64 	`json:"posZ" bson:"posZ"`
 	Width 		float64		`json:"width,omitempty" bson:"width,omitempty"`
 	Height 		float64		`json:"height,omitempty" bson:"height,omitempty"`
+}
+
+func NewBuilding(newBuilding *model.BuildingPlacement) *Building {
+
+	return &Building{
+		Name: newBuilding.Name,
+		PosX: newBuilding.PosX,
+		PosY: newBuilding.PosY,
+		Width: newBuilding.Width,
+		Height: newBuilding.Height,
+		IsPlaced: false,
+	}
 }
 
 // Equal checks if two Building instances are equal.

@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	// "math/rand"
-	// "time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Manages the base structs and methods 
+
+//TODO have a Buildings in inventory and a buildings placed map so I can qucikly see if buildings are available and move them between maps
+// TODO remove IsPlaced and replace with above, because we have multiple of the same buildings placed in the grid and want it to be more dynamic based on building type and position
 
 // Base represents a base owned by [User]s
 type Base struct {
@@ -97,45 +98,80 @@ func (base *Base) ValidateBuildingPlacement(building *Building) error {
 	return nil
 }
 
+// Validate that the building is able to be placed
+func (base *Base) ValidateBuildingRemoval(building *Building) error {
+	gridSizeX := len(base.Grid[0])
+	gridSizeY := len(base.Grid)
+
+	startX := int(building.PosX)
+	startY := int(building.PosY)
+	endX := startX + int(building.Width)
+	endY := startY + int(building.Height)
+
+	//TODO ensure that the amount of that type of building is not more than the user is allowed
+	// Add a map of building types to confirm it is a valid building type then compare the level of the user's base to how many of each building they are allowed to use
+	// buildingName := building.Name
+
+	// barracksCount := len(base.Buildings[buildingName])
+
+	// Ensure the building is within the size of the grid
+	if startX < 0 || startY < 0 || endX > gridSizeX || endY > gridSizeY {
+			return fmt.Errorf("Building Placement failed: building is out of grid bounds")
+	}
+
+	// Ensure this building is at the given location
+	for i := startY; i < endY; i++ {
+			for j := startX; j < endX; j++ {
+					if base.Grid[i][j] == nil || !base.Grid[i][j].Equal(building) {
+							return fmt.Errorf("Building removal failed: Not same building in location")
+					}
+			}
+	}
+
+	return nil
+}
+
 // Add a Building to the base
 func (base *Base) AddBuildingToBase(building *Building) error {
 	if err := base.ValidateBuildingPlacement(building); err != nil {
 		return err
 	}
+	building.IsPlaced = true
 
 	err := base.addToBuildings(building)
 	if err != nil {
+		building.IsPlaced = false
 		return err
 	}
 
 	err = base.placeBuildingOnGrid(building)
 	if err != nil {
+		building.IsPlaced = false
 		base.removeFromBuildings(building)
 		return err
 	}
 
-	building.IsPlaced = true
 	return nil
 }
 
 // Remove a Building from the base
 func (base *Base) RemoveBuildingFromBase(building *Building) error {
-	if err := base.ValidateBuildingPlacement(building); err != nil {
+	if err := base.ValidateBuildingRemoval(building); err != nil {
 		return err
 	}
 
-	err := base.removeFromBuildings(building)
+	err, removedBuilding := base.removeFromBuildings(building)
 	if err != nil {
 		return err
 	}
 
-	err = base.removeBuildingFromGrid(building)
+	err, removedBuilding  = base.removeBuildingFromGrid(building)
 	if err != nil {
 		base.addToBuildings(building)
 		return err
 	}
+	removedBuilding.IsPlaced = false
 
-	building.IsPlaced = true
 	return nil
 }
 
@@ -156,25 +192,27 @@ func (base *Base) placeBuildingOnGrid(building *Building) error {
 }
 
 // Remove a building from the grid of a base
-func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) error {
+func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) (error, *Building) {
 	startX := int(buildingToRemove.PosX)
 	startY := int(buildingToRemove.PosY)
 	endX := startX + int(buildingToRemove.Width)
 	endY := startY + int(buildingToRemove.Height)
 
 	emptyBuilding := new(Building)
+	removedBuilding := new(Building)
 
 	for i := startY; i < endY; i++ {
 		for j := startX; j < endX; j++ {			
 			// Check if the current cell contains the building to remove
-			if base.Grid[i][j].Equal(buildingToRemove) {
 				// Set the cell to an empty building
+				fmt.Println("here")
+				fmt.Println(base.Grid[i][j])
+				removedBuilding = base.Grid[i][j]
 				base.Grid[i][j] = emptyBuilding
-			}
 		}
 	}
 
-	return nil
+	return nil, removedBuilding
 }
 
 // Add a new building to the Buildings map
@@ -193,7 +231,7 @@ func (base *Base) addToBuildings(newBuilding *Building) error {
 }
 
 // Remove a building from the Buildings map
-func (base *Base) removeFromBuildings(buildingToRemove *Building) error {
+func (base *Base) removeFromBuildings(buildingToRemove *Building) (error, *Building) {
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(buildingToRemove.Name)
 	if existingBuildings, ok := base.Buildings[buildingType]; ok {
@@ -202,12 +240,12 @@ func (base *Base) removeFromBuildings(buildingToRemove *Building) error {
 			if existingBuilding.Equal(buildingToRemove) {
 				// Remove the building by slicing it out of the slice
 				base.Buildings[buildingType] = append(existingBuildings[:i], existingBuildings[i+1:]...)
-				return nil
+				return nil, &existingBuildings[i]
 			}
 		}
 	}
-
-	return nil
+	// Building type not found in the map, return an error
+	return fmt.Errorf("Building type '%s' not found in the map", buildingType), nil
 }
 
 // TODO create method that adds building to buildings array and to grid. And a method that will remove it from each. Need to make a method that does everything that is needed when a building is added to the base

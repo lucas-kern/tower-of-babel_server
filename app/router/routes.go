@@ -12,8 +12,9 @@ import (
 func GetRouter(db *database.Database) *httprouter.Router{
 	EnvHandler := handlers.NewHandlerEnv(db)
 	router := httprouter.New()
-	router.GET("/bases/:id", EnvHandler.Authentication(EnvHandler.Bases))
-	router.POST("/bases/:id", EnvHandler.Authentication(EnvHandler.Bases))
+	router.GET("/bases", EnvHandler.Authentication(EnvHandler.Bases))
+	router.POST("/bases", EnvHandler.Authentication(EnvHandler.Bases))
+	router.POST("/bases/place", EnvHandler.Authentication(EnvHandler.PlaceBuilding))
 	router.POST("/users/signup", EnvHandler.SignUp)
 	router.POST("/users/login", EnvHandler.Login)
 	router.POST("/token", EnvHandler.TokenRefresh)

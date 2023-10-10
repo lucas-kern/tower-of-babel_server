@@ -210,6 +210,8 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 	}
 
 	clientUser := model.NewUser(foundUser)
+	clientUser.Token = &token
+	clientUser.Refresh_token = &refreshToken
 	clientUser.Base = foundUserBase
 
 	WriteSuccessResponse(w, clientUser)

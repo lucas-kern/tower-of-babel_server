@@ -8,8 +8,6 @@ import (
     "go.mongodb.org/mongo-driver/bson/primitive"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/mongo/options"
-    
-	// "strconv"
 
     "github.com/julienschmidt/httprouter"
     "github.com/lucas-kern/tower-of-babel_server/app/model"
@@ -17,23 +15,16 @@ import (
     "github.com/lucas-kern/tower-of-babel_server/app/auth"
 )
 
-func (env *HandlerEnv) Bases(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-        // id, err := strconv.Atoi(params.ByName("id"))
-        // if err != nil {return};
-        // json.NewEncoder(w).Encode(bases[id])
-        WriteSuccessResponse(w, true)
-}
-
-// TODO finish this method
 // Function to place a building in a base
 func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     currUser := new(model.User)
     currBase := new(model.Base)
     var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel()
+
     // How to access the "claims" object so the user properties from the auth token
-    // TODO use this to pull user from DB for validations
     claims := r.Context().Value("claims").(*auth.SignedDetails)
+
     // Parse the request body to get building placement data
     var placementData requests.BuildingPlacement
     err := json.NewDecoder(r.Body).Decode(&placementData)
@@ -54,7 +45,6 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
     var userCollection model.Collection = env.database.GetUsers()
     err = userCollection.FindOne(currUser, ctx, bson.M{"ID": objectID})
 
-    //TODO ensure that the base is being written to the database correctly
     var baseCollection model.Collection = env.database.GetBases()
     err = baseCollection.FindOne(currBase, ctx, bson.M{"owner": objectID})
     building := model.NewBuilding(&placementData)
@@ -93,12 +83,18 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
         return
     }
 
-    // Update the database with the new building placement or upgrade
+    if result.MatchedCount == 0 {
+        // Handle the case where no documents were matched by the filter
+        WriteErrorResponse(w, http.StatusNotFound, "No matching base found for the update")
+        return
+    }
+    
+    if result.ModifiedCount == 0 {
+        // Handle the case where the update didn't modify any documents
+        WriteErrorResponse(w, http.StatusNoContent, "No changes were made during the update")
+        return
+    }
 
     // Return a success response to the client
-    WriteSuccessResponse(w, result)
-    // WriteSuccessResponse(w, "Building placed/updated successfully")
+    WriteSuccessResponse(w, currBase)
 }
-
-// var bases = []model.Base{
-// }

@@ -67,6 +67,12 @@ func NewBase(user_id primitive.ObjectID) *Base {
 
 // Validate that the building is able to be placed
 func (base *Base) ValidateBuildingPlacement(building *Building) error {
+
+	// Check if base.Grid is nil or empty (no rows)
+	if base.Grid == nil || len(base.Grid) == 0  {
+		return fmt.Errorf("Base grid is not instantiated correctly")
+	}
+
 	gridSizeX := len(base.Grid[0])
 	gridSizeY := len(base.Grid)
 
@@ -247,5 +253,3 @@ func (base *Base) removeFromBuildings(buildingToRemove *Building) (error, *Build
 	// Building type not found in the map, return an error
 	return fmt.Errorf("Building type '%s' not found in the map", buildingType), nil
 }
-
-// TODO create method that adds building to buildings array and to grid. And a method that will remove it from each. Need to make a method that does everything that is needed when a building is added to the base

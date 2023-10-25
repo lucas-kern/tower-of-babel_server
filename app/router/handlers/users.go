@@ -1,17 +1,12 @@
 package handlers
 
 import (
-
-		"io"
-		// "bytes"
-
 		"encoding/json"
     "context"
     "fmt"
 		"log"
 
     "net/http"
-		"net/url"
 		"time"
 
 		"github.com/go-playground/validator/v10"
@@ -62,21 +57,10 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Read the request body into a byte slice
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-	}
+	// pull the URL-decoded body from the context (comes from url_decoder middleware)
+	decodedData := r.Context().Value("body").(string)
 
-	// Decode the URL-encoded data
-	decodedData, err := url.QueryUnescape(string(b))
-	if err != nil {
-			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
-			return
-	}
-
-	err = json.Unmarshal([]byte(decodedData), &user)
+	err := json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
@@ -146,19 +130,8 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	// Read the request body into a byte slice
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-	}
-
-	// Decode the URL-encoded data
-	decodedData, err := url.QueryUnescape(string(b))
-	if err != nil {
-			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
-			return
-	}
+	// pull the URL-decoded body from the context (comes from url_decoder middleware)
+	decodedData := r.Context().Value("body").(string)
 
 	// Now you have the decoded JSON data as a string
 	fmt.Println("Decoded JSON data:", decodedData)
@@ -166,7 +139,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 	foundUser := new(model.User)
 	foundUserBase := new(model.Base)
 
-	err = json.Unmarshal([]byte(decodedData), &user)
+	err := json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")

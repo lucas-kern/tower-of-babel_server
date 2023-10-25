@@ -11,6 +11,7 @@ func TestBuildingEqual_SameBuilding(t *testing.T) {
         IsPlaced: true,
         PosX:    0,
         PosY:    0,
+        PosZ:    0,
         Width:   2,
         Height:  2,
     }
@@ -19,6 +20,7 @@ func TestBuildingEqual_SameBuilding(t *testing.T) {
         IsPlaced: true,
         PosX:    0,
         PosY:    0,
+        PosZ:    0,
         Width:   2,
         Height:  2,
     }
@@ -34,6 +36,7 @@ func TestBuildingEqual_DifferentBuilding(t *testing.T) {
         IsPlaced: true,
         PosX:    0,
         PosY:    0,
+        PosZ:    0,
         Width:   2,
         Height:  2,
     }
@@ -42,6 +45,7 @@ func TestBuildingEqual_DifferentBuilding(t *testing.T) {
         IsPlaced: true,
         PosX:    0,
         PosY:    0,
+        PosZ:    0,
         Width:   2,
         Height:  2,
     }
@@ -57,6 +61,7 @@ func TestBuildingEqual_DifferentPosition(t *testing.T) {
         IsPlaced: true,
         PosX:    0,
         PosY:    0,
+        PosZ:    0,
         Width:   2,
         Height:  2,
     }
@@ -65,6 +70,7 @@ func TestBuildingEqual_DifferentPosition(t *testing.T) {
         IsPlaced: true,
         PosX:    1,
         PosY:    1,
+        PosZ:    1,
         Width:   2,
         Height:  2,
     }

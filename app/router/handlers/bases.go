@@ -1,6 +1,7 @@
 package handlers
 
 import (
+    "fmt"
 	"net/http"
     "encoding/json"
     "context"
@@ -24,15 +25,27 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
 
     // How to access the "claims" object so the user properties from the auth token
     claims := r.Context().Value("claims").(*auth.SignedDetails)
+    body := r.Context().Value("body").(string)
 
     // Parse the request body to get building placement data
+    // Unmarshal the URL-decoded JSON data into the placementData struct
     var placementData requests.BuildingPlacement
-    err := json.NewDecoder(r.Body).Decode(&placementData)
+    err := json.Unmarshal([]byte(body), &placementData)
     if err != nil {
         // Handle JSON decoding error
-        http.Error(w, "Error decoding request body", http.StatusBadRequest)
+        WriteErrorResponse(w, http.StatusBadRequest, err.Error())
         return
     }
+
+    fmt.Println(*placementData.PosX)
+    fmt.Println(*placementData.PosY)
+    err = requests.ValidateBuildingPlacementStruct(&placementData)
+    if err != nil {
+        // Handle JSON decoding error
+        WriteErrorResponse(w, http.StatusUnprocessableEntity, err.Error())
+        return
+    }
+
 
     // Convert the hexadecimal string to an ObjectID
     objectID, err := primitive.ObjectIDFromHex(claims.Uid)

@@ -21,8 +21,9 @@ func NewBuilding(newBuilding *model.BuildingPlacement) *Building {
 
 	return &Building{
 		Name: newBuilding.Name,
-		PosX: newBuilding.PosX,
-		PosY: newBuilding.PosY,
+		PosX: *newBuilding.PosX,
+		PosY: *newBuilding.PosY,
+		PosZ: *newBuilding.PosZ,
 		Width: newBuilding.Width,
 		Height: newBuilding.Height,
 		IsPlaced: false,
@@ -32,5 +33,5 @@ func NewBuilding(newBuilding *model.BuildingPlacement) *Building {
 // Equal checks if two Building instances are equal.
 func (b *Building) Equal(other *Building) bool {
 	// Compare all relevant fields for equality
-	return b.Name == other.Name && b.PosX == other.PosX && b.PosY == other.PosY && b.Width == other.Width && b.Height == other.Height
+	return b.Name == other.Name && b.PosX == other.PosX && b.PosY == other.PosY && b.PosZ == other.PosZ && b.Width == other.Width && b.Height == other.Height
 }

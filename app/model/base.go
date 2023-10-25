@@ -33,8 +33,8 @@ func NewBase(user_id primitive.ObjectID) *Base {
 	}
 
 	// Create the grid and initialize it with nil values
-	gridWidth := 1000 // Set the width of the grid (adjust as needed)
-	gridHeight := 1000 // Set the height of the grid (adjust as needed)
+	gridWidth := 100 // Set the width of the grid (adjust as needed)
+	gridHeight := 100 // Set the height of the grid (adjust as needed)
 
 	grid := make([][]*Building, gridHeight)
 	for i := range grid {
@@ -43,11 +43,11 @@ func NewBase(user_id primitive.ObjectID) *Base {
 
 	// Calculate the middle of the grid
 	middleX := gridWidth / 2
-	middleY := gridHeight / 2
+	middleZ := gridHeight / 2
 
 	// Calculate the initial position of the tower to place it in the middle
 	tower.PosX = float64(middleX) - tower.Width/2
-	tower.PosY = float64(middleY) - tower.Height/2
+	tower.PosZ = float64(middleZ) - tower.Height/2
 
 	base := &Base{
 		ID:        primitive.NewObjectID(),
@@ -74,12 +74,12 @@ func (base *Base) ValidateBuildingPlacement(building *Building) error {
 	}
 
 	gridSizeX := len(base.Grid[0])
-	gridSizeY := len(base.Grid)
+	gridSizeZ := len(base.Grid)
 
 	startX := int(building.PosX)
-	startY := int(building.PosY)
+	startZ := int(building.PosZ)
 	endX := startX + int(building.Width)
-	endY := startY + int(building.Height)
+	endZ := startZ + int(building.Height)
 
 	//TODO ensure that the amount of that type of building is not more than the user is allowed
 	// Add a map of building types to confirm it is a valid building type then compare the level of the user's base to how many of each building they are allowed to use
@@ -88,12 +88,12 @@ func (base *Base) ValidateBuildingPlacement(building *Building) error {
 	// barracksCount := len(base.Buildings[buildingName])
 
 	// Ensure the building is within the size of the grid
-	if startX < 0 || startY < 0 || endX > gridSizeX || endY > gridSizeY {
+	if startX < 0 || startZ < 0 || endX > gridSizeX || endZ > gridSizeZ {
 			return fmt.Errorf("Building Placement failed: building is out of grid bounds")
 	}
 
 	// Ensure there is no other building in the placement
-	for i := startY; i < endY; i++ {
+	for i := startZ; i < endZ; i++ {
 			for j := startX; j < endX; j++ {
 					if base.Grid[i][j] != nil {
 							return fmt.Errorf("Building Placement failed: building overlaps with existing building")
@@ -107,12 +107,12 @@ func (base *Base) ValidateBuildingPlacement(building *Building) error {
 // Validate that the building is able to be placed
 func (base *Base) ValidateBuildingRemoval(building *Building) error {
 	gridSizeX := len(base.Grid[0])
-	gridSizeY := len(base.Grid)
+	gridSizeZ := len(base.Grid)
 
 	startX := int(building.PosX)
-	startY := int(building.PosY)
+	startZ := int(building.PosZ)
 	endX := startX + int(building.Width)
-	endY := startY + int(building.Height)
+	endZ := startZ + int(building.Height)
 
 	//TODO ensure that the amount of that type of building is not more than the user is allowed
 	// Add a map of building types to confirm it is a valid building type then compare the level of the user's base to how many of each building they are allowed to use
@@ -121,12 +121,12 @@ func (base *Base) ValidateBuildingRemoval(building *Building) error {
 	// barracksCount := len(base.Buildings[buildingName])
 
 	// Ensure the building is within the size of the grid
-	if startX < 0 || startY < 0 || endX > gridSizeX || endY > gridSizeY {
+	if startX < 0 || startZ < 0 || endX > gridSizeX || endZ > gridSizeZ {
 			return fmt.Errorf("Building Placement failed: building is out of grid bounds")
 	}
 
 	// Ensure this building is at the given location
-	for i := startY; i < endY; i++ {
+	for i := startZ; i < endZ; i++ {
 			for j := startX; j < endX; j++ {
 					if base.Grid[i][j] == nil || !base.Grid[i][j].Equal(building) {
 							return fmt.Errorf("Building removal failed: Not same building in location")
@@ -184,11 +184,11 @@ func (base *Base) RemoveBuildingFromBase(building *Building) error {
 // Add a building to the grid of a base
 func (base *Base) placeBuildingOnGrid(building *Building) error {
 	startX := int(building.PosX)
-	startY := int(building.PosY)
+	startZ := int(building.PosZ)
 	endX := startX + int(building.Width)
-	endY := startY + int(building.Height)
+	endZ := startZ + int(building.Height)
 
-	for i := startY; i < endY; i++ {
+	for i := startZ; i < endZ; i++ {
 			for j := startX; j < endX; j++ {
 					base.Grid[i][j] = building
 			}
@@ -200,14 +200,14 @@ func (base *Base) placeBuildingOnGrid(building *Building) error {
 // Remove a building from the grid of a base
 func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) (error, *Building) {
 	startX := int(buildingToRemove.PosX)
-	startY := int(buildingToRemove.PosY)
+	startZ := int(buildingToRemove.PosZ)
 	endX := startX + int(buildingToRemove.Width)
-	endY := startY + int(buildingToRemove.Height)
+	endZ := startZ + int(buildingToRemove.Height)
 
 	emptyBuilding := new(Building)
 	removedBuilding := new(Building)
 
-	for i := startY; i < endY; i++ {
+	for i := startZ; i < endZ; i++ {
 		for j := startX; j < endX; j++ {			
 			// Check if the current cell contains the building to remove
 				// Set the cell to an empty building

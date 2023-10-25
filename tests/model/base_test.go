@@ -26,8 +26,8 @@ func TestNewBase(t *testing.T) {
 	}
 
 	// Check if the grid is initialized correctly
-	gridWidth := 1000
-	gridHeight := 1000
+	gridWidth := 100
+	gridHeight := 100
 	if len(base.Grid) != gridHeight {
 		t.Errorf("Expected grid height to be %d, but got %d", gridHeight, len(base.Grid))
 	}
@@ -37,12 +37,12 @@ func TestNewBase(t *testing.T) {
 
 	// Check if the tower is placed at the correct position
 	middleX := gridWidth / 2
-	middleY := gridHeight / 2
+	middleZ := gridHeight / 2
 	expectedPosX := float64(middleX) - 1.0 // Adjusted for tower width
-	expectedPosY := float64(middleY) - 1.0 // Adjusted for tower height
+	expectedPosZ := float64(middleZ) - 1.0 // Adjusted for tower height
 
 	// Ensure the tower exists in the grid at the expected positions
-	tower := base.Grid[int(expectedPosY)][int(expectedPosX)]
+	tower := base.Grid[int(expectedPosZ)][int(expectedPosX)]
 	if tower == nil {
 		t.Error("Expected tower in the grid, but it's nil.")
 	}
@@ -57,8 +57,8 @@ func TestNewBase(t *testing.T) {
 	if tower.PosX != expectedPosX {
 		t.Errorf("Expected tower PosX to be %f, but got %f", expectedPosX, tower.PosX)
 	}
-	if tower.PosY != expectedPosY {
-		t.Errorf("Expected tower PosY to be %f, but got %f", expectedPosY, tower.PosY)
+	if tower.PosZ != expectedPosZ {
+		t.Errorf("Expected tower PosZ to be %f, but got %f", expectedPosZ, tower.PosZ)
 	}
 	if tower.Width != 2.0 {
 		t.Errorf("Expected tower Width to be 2.0, but got %f", tower.Width)
@@ -83,6 +83,7 @@ func TestValidateBuildingPlacement_ValidPlacement(t *testing.T) {
 			IsPlaced: true,
 			PosX:    0,
 			PosY:    0,
+			PosZ:    0,
 			Width:   2,
 			Height:  2,
 	}
@@ -107,6 +108,7 @@ func TestValidateBuildingPlacement_OutOfBounds(t *testing.T) {
 			IsPlaced: true,
 			PosX:    4, // Placed at the right edge of the grid
 			PosY:    0,
+			PosZ:    0,
 			Width:   2,
 			Height:  2,
 	}
@@ -133,6 +135,7 @@ func TestValidateBuildingPlacement_OverlapWithExistingBuilding(t *testing.T) {
 			IsPlaced: true,
 			PosX:    0,
 			PosY:    0,
+			PosZ:    0,
 			Width:   2,
 			Height:  2,
 	}
@@ -142,6 +145,7 @@ func TestValidateBuildingPlacement_OverlapWithExistingBuilding(t *testing.T) {
 			IsPlaced: true,
 			PosX:    0,
 			PosY:    0,
+			PosZ:    0,
 			Width:   2,
 			Height:  2,
 	}
@@ -168,6 +172,7 @@ func TestAddBuildingToBase_ValidPlacement(t *testing.T) {
 		IsPlaced: false, // Building is not placed initially
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   2,
 		Height:  2,
 	}
@@ -193,7 +198,8 @@ func TestAddBuildingToBase_OutOfBounds(t *testing.T) {
 		Name:    "tower",
 		IsPlaced: false, // Building is not placed initially
 		PosX:    0, // Placed at the right edge of the grid
-		PosY:    4,
+		PosY:    0,
+		PosZ:    4,
 		Width:   2,
 		Height:  2,
 	}
@@ -221,6 +227,7 @@ func TestAddBuildingToBase_OverlapWithExistingBuilding(t *testing.T) {
 		IsPlaced: true,
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   2,
 		Height:  2,
 	}
@@ -230,6 +237,7 @@ func TestAddBuildingToBase_OverlapWithExistingBuilding(t *testing.T) {
 		IsPlaced: false, // Building is not placed initially
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   2,
 		Height:  2,
 	}
@@ -258,6 +266,7 @@ func TestAddBuildingToBase_BuildingInGrid(t *testing.T) {
 			IsPlaced: false, // Building is not placed initially
 			PosX:    1,
 			PosY:    1,
+			PosZ:    1,
 			Width:   2,
 			Height:  2,
 	}
@@ -268,11 +277,11 @@ func TestAddBuildingToBase_BuildingInGrid(t *testing.T) {
 
 	// Check if the building is present in the correct cells of the grid
 	startX := int(building.PosX)
-	startY := int(building.PosY)
+	startZ := int(building.PosZ)
 	endX := startX + int(building.Width)
-	endY := startY + int(building.Height)
+	endZ := startZ + int(building.Height)
 
-	for i := startY; i < endY; i++ {
+	for i := startZ; i < endZ; i++ {
 			for j := startX; j < endX; j++ {
 					assert.Equal(t, building, base.Grid[i][j], "Expected building to be in the grid cell")
 			}
@@ -297,6 +306,7 @@ func TestAddBuildingToBase_BuildingInBuildingsMap(t *testing.T) {
 		IsPlaced: false, // Building is not placed initially
 		PosX:     1,
 		PosY:     1,
+		PosZ:     1,
 		Width:    2,
 		Height:   2,
 	}
@@ -326,6 +336,7 @@ func TestRemoveBuildingFromBase_ValidRemoval(t *testing.T) {
 		IsPlaced: true,
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   1,
 		Height:  1,
 	}
@@ -357,6 +368,7 @@ func TestRemoveBuildingFromBase_BuildingNotInGrid(t *testing.T) {
 		IsPlaced: true,
 		PosX:     0,
 		PosY:     0,
+		PosZ:     0,
 		Width:    2,
 		Height:   2,
 	}
@@ -385,6 +397,7 @@ func TestRemoveBuildingFromBase_ErrorInRemoveFromBuildings(t *testing.T) {
 		IsPlaced: true,
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   2,
 		Height:  2,
 	}
@@ -414,6 +427,7 @@ func TestRemoveBuildingFromBase_BuildingSameAsOther(t *testing.T) {
 		IsPlaced: true,
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   1,
 		Height:  1,
 	}
@@ -425,6 +439,7 @@ func TestRemoveBuildingFromBase_BuildingSameAsOther(t *testing.T) {
 		IsPlaced: false,
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   1,
 		Height:  1,
 	}
@@ -457,6 +472,7 @@ func TestRemoveBuildingFromBase_BuildingDifferentFromOther(t *testing.T) {
 		IsPlaced: true,
 		PosX:    0,
 		PosY:    0,
+		PosZ:    0,
 		Width:   1,
 		Height:  1,
 	}
@@ -468,6 +484,7 @@ func TestRemoveBuildingFromBase_BuildingDifferentFromOther(t *testing.T) {
 		IsPlaced: true,
 		PosX:    1,
 		PosY:    0,
+		PosZ:    0,
 		Width:   1,
 		Height:  1,
 	}

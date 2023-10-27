@@ -22,6 +22,7 @@ type Base struct {
 }
 
 func NewBase(user_id primitive.ObjectID) *Base {
+	// TODO This should be more dynamic so it isn't hardcoded. should send the tower prefab from frontend with the correct configuration
 	tower := Building{
 		Name:     "tower",
 		IsPlaced: true,

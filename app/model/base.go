@@ -28,8 +28,8 @@ func NewBase(user_id primitive.ObjectID) *Base {
 		PosX:     0,
 		PosY:     0,
 		PosZ:     0,
-		Width:    2, // Set the width of the tower (adjust as needed)
-		Height:   2, // Set the height of the tower (adjust as needed)
+		Width:    10, // Set the width of the tower (adjust as needed)
+		Height:   10, // Set the height of the tower (adjust as needed)
 	}
 
 	// Create the grid and initialize it with nil values

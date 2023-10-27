@@ -38,8 +38,9 @@ func TestNewBase(t *testing.T) {
 	// Check if the tower is placed at the correct position
 	middleX := gridWidth / 2
 	middleZ := gridHeight / 2
-	expectedPosX := float64(middleX) - 1.0 // Adjusted for tower width
-	expectedPosZ := float64(middleZ) - 1.0 // Adjusted for tower height
+	expectedPosX := float64(middleX) - 5 // Adjusted for tower width/2
+	expectedPosZ := float64(middleZ) - 5 // Adjusted for tower height/2
+	expectedTowerDimensions := 10.0
 
 	// Ensure the tower exists in the grid at the expected positions
 	tower := base.Grid[int(expectedPosZ)][int(expectedPosX)]
@@ -60,11 +61,11 @@ func TestNewBase(t *testing.T) {
 	if tower.PosZ != expectedPosZ {
 		t.Errorf("Expected tower PosZ to be %f, but got %f", expectedPosZ, tower.PosZ)
 	}
-	if tower.Width != 2.0 {
-		t.Errorf("Expected tower Width to be 2.0, but got %f", tower.Width)
+	if tower.Width != expectedTowerDimensions {
+		t.Errorf("Expected tower Width to be %f, but got %f", expectedTowerDimensions, tower.Width)
 	}
-	if tower.Height != 2.0 {
-		t.Errorf("Expected tower Height to be 2.0, but got %f", tower.Height)
+	if tower.Height != expectedTowerDimensions {
+		t.Errorf("Expected tower Height to be %f, but got %f", expectedTowerDimensions, tower.Height)
 	}
 }
 

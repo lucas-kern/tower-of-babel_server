@@ -54,7 +54,6 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
         panic(err)
     }
 
-    //TODO have the user to check things like resources
     var userCollection model.Collection = env.database.GetUsers()
     err = userCollection.FindOne(currUser, ctx, bson.M{"ID": objectID})
 
@@ -63,8 +62,6 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
     building := model.NewBuilding(&placementData)
 
     // Perform validation checks (e.g., user permissions, available resources)
-    // TODO ensure that user has the correct amount of resources. Will need to pull user from DB with user ID from claims and then ensure the info is correct.
-    // validate that building is unlocked for user
 
     // Need to persist the base after the building is placed
     if err := currBase.AddBuildingToBase(building); err != nil {

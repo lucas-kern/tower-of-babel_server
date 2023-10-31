@@ -6,7 +6,6 @@ import (
 // Manages the building struct and methods 
 
 // Building represents a simple building with location
-// TODO get rid of IsPlaced
 type Building struct {
 	Name			string		`json:"name,omitempty" bson:"name,omitempty"`
 	IsPlaced 	bool			`json:"isPlaced" bson:"isPlaced"`

@@ -9,7 +9,6 @@ import (
 
 // This registers all our routes and can wrap them in middle ware for auth and other items
 // Returns the router with paths and handlers
-//TODO add a refresh token endpoint and route
 func GetRouter(db *database.Database) *httprouter.Router{
 	EnvHandler := handlers.NewHandlerEnv(db)
 	router := httprouter.New()

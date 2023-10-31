@@ -10,9 +10,6 @@ import (
 
 // Manages the base structs and methods 
 
-//TODO have a Buildings in inventory and a buildings placed map so I can qucikly see if buildings are available and move them between maps
-// TODO remove IsPlaced and replace with above, because we have multiple of the same buildings placed in the grid and want it to be more dynamic based on building type and position
-
 // Base represents a base owned by [User]s
 type Base struct {
 	ID          primitive.ObjectID `json:"id,omitempty" bson:"_id"`
@@ -22,7 +19,6 @@ type Base struct {
 }
 
 func NewBase(user_id primitive.ObjectID) *Base {
-	// TODO This should be more dynamic so it isn't hardcoded. should send the tower prefab from frontend with the correct configuration
 	tower := Building{
 		Name:     "tower",
 		IsPlaced: true,
@@ -82,12 +78,6 @@ func (base *Base) ValidateBuildingPlacement(building *Building) error {
 	endX := startX + int(building.Width)
 	endZ := startZ + int(building.Height)
 
-	//TODO ensure that the amount of that type of building is not more than the user is allowed
-	// Add a map of building types to confirm it is a valid building type then compare the level of the user's base to how many of each building they are allowed to use
-	// buildingName := building.Name
-
-	// barracksCount := len(base.Buildings[buildingName])
-
 	// Ensure the building is within the size of the grid
 	if startX < 0 || startZ < 0 || endX > gridSizeX || endZ > gridSizeZ {
 			return fmt.Errorf("Building Placement failed: building is out of grid bounds")
@@ -114,12 +104,6 @@ func (base *Base) ValidateBuildingRemoval(building *Building) error {
 	startZ := int(building.PosZ)
 	endX := startX + int(building.Width)
 	endZ := startZ + int(building.Height)
-
-	//TODO ensure that the amount of that type of building is not more than the user is allowed
-	// Add a map of building types to confirm it is a valid building type then compare the level of the user's base to how many of each building they are allowed to use
-	// buildingName := building.Name
-
-	// barracksCount := len(base.Buildings[buildingName])
 
 	// Ensure the building is within the size of the grid
 	if startX < 0 || startZ < 0 || endX > gridSizeX || endZ > gridSizeZ {

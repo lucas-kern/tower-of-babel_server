@@ -48,12 +48,10 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 
 // Sign up allows a user with a unique email address to create an account and persists the account
 // TODO see what code is repeated with login and make external function for it
-// TODO send a confirmation email when user signs up
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
 	var baseCollection model.Collection = env.database.GetBases()
 	var user model.User
-	// TODO make this method faster if possible
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -153,7 +151,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
-		//TODO sanitize input before Finding in DB to avoid NoSQL injection
+	//TODO sanitize input before Finding in DB to avoid NoSQL injection
 	err = userCollection.FindOne(foundUser, ctx, bson.M{"email": user.Email})
 	defer cancel()
 	if err != nil {
@@ -209,8 +207,6 @@ func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps h
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
 
-	//TODO this works, but we don't need to send the user data back every time we authenticate
-	// TODO remove client ID from client user since it is stored in the token which will improve security so it can't be changed 
 	var user model.ClientUser
 	user.Refresh_token = &refreshToken
 	user.Token = &token

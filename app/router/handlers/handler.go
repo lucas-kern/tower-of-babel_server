@@ -34,6 +34,7 @@ func WriteSuccessResponse(w http.ResponseWriter, d interface{}){
 
 // WriteErrorResponse writes an error code and message to a writer
 func WriteErrorResponse(w http.ResponseWriter, errorCode int, errorMsg string){
+	log.Println(errorMsg)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(errorCode)
 	json.NewEncoder(w).Encode(model.ErrorResponse{Status: errorCode, Name: errorMsg})

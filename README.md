@@ -19,6 +19,8 @@ Read [`How to Write Go Code`](https://go.dev/doc/code) for a simple understandin
 
 ### Starting the project
 
+EXPORT ENV VARIABLES FIRST
+
 To start the project run `go run app/main.go`
 
 Stop the server by hitting `ctrl + c`
@@ -36,6 +38,7 @@ We will be using MongoDB community Server for development.
   1. Install the Community version 6.0
 
 #### Running MongoDB
+  - EXPORT ENV VARIABLES FIRST
   - using a terminal `mongod --config /usr/local/etc/mongod.conf`
     - NOTE: Will use the terminal window to print logs
   - Run as a service `brew services start mongodb-community@6.0`
@@ -96,4 +99,10 @@ We will be using MongoDB community Server for development.
 2. in mongo, run `show dbs`
 3. check for the 'tower-of-babel' instance
 
+## Testing
 
+1. Tests go in the `tests` directory
+1. Follow the direcotry structure of the file you are testing and add `_test.go` to the name of the file
+  * ex) If you are testing `app/model/base` then the test directory should be `tests/model/base_test`
+1. To run the tests run `go test ./tests/*`
+  * Could run a specific test file by giving the direct path to test

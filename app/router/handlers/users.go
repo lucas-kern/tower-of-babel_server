@@ -1,17 +1,12 @@
 package handlers
 
 import (
-
-		"io"
-		// "bytes"
-
 		"encoding/json"
     "context"
     "fmt"
 		"log"
 
     "net/http"
-		"net/url"
 		"time"
 
 		"github.com/go-playground/validator/v10"
@@ -53,29 +48,17 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 
 // Sign up allows a user with a unique email address to create an account and persists the account
 // TODO see what code is repeated with login and make external function for it
-// TODO send a confirmation email when user signs up
 func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
+	var baseCollection model.Collection = env.database.GetBases()
 	var user model.User
-	// TODO make this method faster if possible
 	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Read the request body into a byte slice
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-	}
+	// pull the URL-decoded body from the context (comes from url_decoder middleware)
+	decodedData := r.Context().Value("body").(string)
 
-	// Decode the URL-encoded data
-	decodedData, err := url.QueryUnescape(string(b))
-	if err != nil {
-			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
-			return
-	}
-
-	err = json.Unmarshal([]byte(decodedData), &user)
+	err := json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
@@ -112,8 +95,7 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.ID = primitive.NewObjectID()
-	user.User_id = user.ID.Hex()
-	token, refreshToken, _ := auth.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, user.User_id)
+	token, refreshToken, _ := auth.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, user.ID.Hex())
 	user.Token = &token
 	user.Refresh_token = &refreshToken
 
@@ -125,36 +107,37 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 	defer cancel()
 
+	base := model.NewBase(user.ID)
+	_, insertErr = baseCollection.InsertOne(ctx, base)
+	if insertErr != nil {
+			log.Println("Base item was not created")
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
+			return
+	}
+	defer cancel()
+
 	WriteSuccessResponse(w, "Account created successfully")
 }
 
+// TODO move all the DB stuff to the model so we don't need to repeat code to get Users? Not sure what the golang standard here is 
 //Login will allow a user to login to an account
 func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
+	var baseCollection model.Collection = env.database.GetBases()
 	var user model.User
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	// Read the request body into a byte slice
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-	}
-
-	// Decode the URL-encoded data
-	decodedData, err := url.QueryUnescape(string(b))
-	if err != nil {
-			http.Error(w, "Error decoding URL-encoded data", http.StatusBadRequest)
-			return
-	}
+	// pull the URL-decoded body from the context (comes from url_decoder middleware)
+	decodedData := r.Context().Value("body").(string)
 
 	// Now you have the decoded JSON data as a string
 	fmt.Println("Decoded JSON data:", decodedData)
 
 	foundUser := new(model.User)
+	foundUserBase := new(model.Base)
 
-	err = json.Unmarshal([]byte(decodedData), &user)
+	err := json.Unmarshal([]byte(decodedData), &user)
 	if err != nil {
 		log.Println(err)
 		WriteErrorResponse(w, 422, "There was an error with the client request")
@@ -168,7 +151,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
-		//TODO sanitize input before Finding in DB to avoid NoSQL injection
+	//TODO sanitize input before Finding in DB to avoid NoSQL injection
 	err = userCollection.FindOne(foundUser, ctx, bson.M{"email": user.Email})
 	defer cancel()
 	if err != nil {
@@ -185,11 +168,48 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
-	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
+	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.ID.Hex())
 
-	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.User_id)
+	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.ID.Hex())
 
-	clientUser := model.NewUser(&user)
+	err = baseCollection.FindOne(foundUserBase, ctx, bson.M{"owner": foundUser.ID})
+	defer cancel()
+	if err != nil {
+			log.Println(err)
+			WriteErrorResponse(w, 502, "There was an error connecting with the server")
+			return
+	}
+
+	clientUser := model.NewUser(foundUser)
+	clientUser.Token = &token
+	clientUser.Refresh_token = &refreshToken
+	clientUser.Base = foundUserBase
 
 	WriteSuccessResponse(w, clientUser)
+}
+
+func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var userCollection model.Collection = env.database.GetUsers()
+	clientToken := r.Header.Get("refresh_token")
+	if clientToken == "" {
+			log.Printf("There is no refresh token")
+
+			return
+	}
+
+	claims, err := auth.ValidateToken(userCollection, clientToken)
+	if err != "" {
+			log.Panic(err)
+			return
+	}
+	
+	token, refreshToken, _ := auth.GenerateAllTokens(claims.Email, claims.First_name, claims.Last_name, claims.Uid)
+
+	auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
+
+	var user model.ClientUser
+	user.Refresh_token = &refreshToken
+	user.Token = &token
+
+	WriteSuccessResponse(w, user)
 }

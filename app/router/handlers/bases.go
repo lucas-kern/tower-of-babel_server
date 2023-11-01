@@ -12,6 +12,7 @@ import (
 
     "github.com/julienschmidt/httprouter"
     "github.com/lucas-kern/tower-of-babel_server/app/model"
+    "github.com/lucas-kern/tower-of-babel_server/app/model/client"
     requests "github.com/lucas-kern/tower-of-babel_server/app/model/requests"
     "github.com/lucas-kern/tower-of-babel_server/app/auth"
 )
@@ -105,6 +106,8 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
         return
     }
 
+    clientBase := client.NewClientBase(currBase)
+
     // Return a success response to the client
-    WriteSuccessResponse(w, currBase)
+    WriteSuccessResponse(w, clientBase)
 }

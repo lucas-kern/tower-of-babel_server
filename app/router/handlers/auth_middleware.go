@@ -24,7 +24,7 @@ func (env *HandlerEnv) Authentication(n httprouter.Handle) httprouter.Handle {
 
         claims, err := auth.ValidateToken(userCollection, clientToken)
         if err != "" {
-						log.Panic(err)
+            WriteErrorResponse(w, http.StatusUnauthorized, "Authentication failed " + err)
             return
 				}
 				

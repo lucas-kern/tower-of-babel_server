@@ -18,6 +18,14 @@ type Base struct {
 	Grid        [][]*Building       `json:"grid,omitempty" bson:"grid,omitempty"`
 }
 
+// Base represents a base owned by [User]s
+type ClientBase struct {
+	ID          primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+	Owner       primitive.ObjectID `json:"owner,omitempty" bson:"owner,omitempty"`
+	Buildings 	map[string][]Building `json:"buildings,omitempty" bson:"buildings,omitempty"`
+	Grid        [][]*Building       `json:"grid,omitempty" bson:"grid,omitempty"`
+}
+
 func NewBase(user_id primitive.ObjectID) *Base {
 	tower := Building{
 		Name:     "tower",

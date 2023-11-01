@@ -13,7 +13,8 @@ import (
 		"github.com/julienschmidt/httprouter"
 
     "github.com/lucas-kern/tower-of-babel_server/app/auth"
-    "github.com/lucas-kern/tower-of-babel_server/app/model"
+		"github.com/lucas-kern/tower-of-babel_server/app/model"
+		"github.com/lucas-kern/tower-of-babel_server/app/model/client"
 
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
@@ -180,7 +181,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 			return
 	}
 
-	clientUser := model.NewUser(foundUser)
+	clientUser := client.NewClientUser(foundUser)
 	clientUser.Token = &token
 	clientUser.Refresh_token = &refreshToken
 	clientUser.Base = foundUserBase
@@ -207,7 +208,7 @@ func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps h
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
 
-	var user model.ClientUser
+	var user client.ClientUser
 	user.Refresh_token = &refreshToken
 	user.Token = &token
 

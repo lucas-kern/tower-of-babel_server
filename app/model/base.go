@@ -12,18 +12,11 @@ import (
 
 // Base represents a base owned by [User]s
 type Base struct {
-	ID          primitive.ObjectID `json:"id,omitempty" bson:"_id"`
-	Owner       primitive.ObjectID `json:"owner,omitempty" bson:"owner,omitempty"`
-	Buildings 	map[string][]Building `json:"buildings,omitempty" bson:"buildings,omitempty"`
-	Grid        [][]*Building       `json:"grid,omitempty" bson:"grid,omitempty"`
-}
-
-// Base represents a base owned by [User]s
-type ClientBase struct {
-	ID          primitive.ObjectID `json:"id,omitempty" bson:"_id"`
-	Owner       primitive.ObjectID `json:"owner,omitempty" bson:"owner,omitempty"`
-	Buildings 	map[string][]Building `json:"buildings,omitempty" bson:"buildings,omitempty"`
-	Grid        [][]*Building       `json:"grid,omitempty" bson:"grid,omitempty"`
+	ID          			primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+	Owner       			primitive.ObjectID `json:"owner,omitempty" bson:"owner,omitempty"`
+	PlacedBuildings 	map[string][]Building `json:"placedBuildings,omitempty" bson:"placedBuildings,omitempty"`
+	PendingBuildings	map[string][]Building `json:"pendingBuildings,omitempty" bson:"pendingBuildings,omitempty"`
+	Grid        			[][]*Building       `json:"grid,omitempty" bson:"grid,omitempty"`
 }
 
 func NewBase(user_id primitive.ObjectID) *Base {
@@ -58,7 +51,7 @@ func NewBase(user_id primitive.ObjectID) *Base {
 		ID:        primitive.NewObjectID(),
 		Owner:     user_id,
 		Grid: 		 grid,
-		Buildings: make(map[string][]Building),
+		PlacedBuildings: make(map[string][]Building),
 	}
 
 	// Add the tower to the building
@@ -137,7 +130,7 @@ func (base *Base) AddBuildingToBase(building *Building) error {
 	}
 	building.IsPlaced = true
 
-	err := base.addToBuildings(building)
+	err := base.addToPlacedBuildings(building)
 	if err != nil {
 		building.IsPlaced = false
 		return err
@@ -146,7 +139,7 @@ func (base *Base) AddBuildingToBase(building *Building) error {
 	err = base.placeBuildingOnGrid(building)
 	if err != nil {
 		building.IsPlaced = false
-		base.removeFromBuildings(building)
+		base.removeFromPlacedBuildings(building)
 		return err
 	}
 
@@ -159,14 +152,14 @@ func (base *Base) RemoveBuildingFromBase(building *Building) error {
 		return err
 	}
 
-	err, removedBuilding := base.removeFromBuildings(building)
+	err, removedBuilding := base.removeFromPlacedBuildings(building)
 	if err != nil {
 		return err
 	}
 
 	err, removedBuilding  = base.removeBuildingFromGrid(building)
 	if err != nil {
-		base.addToBuildings(building)
+		base.addToPlacedBuildings(building)
 		return err
 	}
 	removedBuilding.IsPlaced = false
@@ -214,32 +207,32 @@ func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) (error, *Bu
 	return nil, removedBuilding
 }
 
-// Add a new building to the Buildings map
-func (base *Base) addToBuildings(newBuilding *Building) error {
+// Add a new building to the PlacedBuildings map
+func (base *Base) addToPlacedBuildings(newBuilding *Building) error {
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(newBuilding.Name)
 	
-	if existingBuildings, ok := base.Buildings[buildingType]; ok {
+	if existingPlacedBuildings, ok := base.PlacedBuildings[buildingType]; ok {
 			// If the building type exists, append the new building to the existing slice
-			base.Buildings[buildingType] = append(existingBuildings, *newBuilding)
+			base.PlacedBuildings[buildingType] = append(existingPlacedBuildings, *newBuilding)
 	} else {
 			// If the building type doesn't exist, create a new entry in the map
-			base.Buildings[buildingType] = []Building{*newBuilding}
+			base.PlacedBuildings[buildingType] = []Building{*newBuilding}
 	}
 	return nil
 }
 
-// Remove a building from the Buildings map
-func (base *Base) removeFromBuildings(buildingToRemove *Building) (error, *Building) {
+// Remove a building from the PlacedBuildings map
+func (base *Base) removeFromPlacedBuildings(buildingToRemove *Building) (error, *Building) {
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(buildingToRemove.Name)
-	if existingBuildings, ok := base.Buildings[buildingType]; ok {
-		for i, existingBuilding := range existingBuildings {
+	if existingPlacedBuildings, ok := base.PlacedBuildings[buildingType]; ok {
+		for i, existingBuilding := range existingPlacedBuildings {
 			// Check if the existing building is the one to be removed
 			if existingBuilding.Equal(buildingToRemove) {
 				// Remove the building by slicing it out of the slice
-				base.Buildings[buildingType] = append(existingBuildings[:i], existingBuildings[i+1:]...)
-				return nil, &existingBuildings[i]
+				base.PlacedBuildings[buildingType] = append(existingPlacedBuildings[:i], existingPlacedBuildings[i+1:]...)
+				return nil, &existingPlacedBuildings[i]
 			}
 		}
 	}

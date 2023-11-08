@@ -2,9 +2,9 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
+	"github.com/lucas-kern/tower-of-babel_server/app/helpers"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -12,23 +12,14 @@ import (
 
 // Base represents a base owned by [User]s
 type Base struct {
-	ID          primitive.ObjectID `json:"id,omitempty" bson:"_id"`
-	Owner       primitive.ObjectID `json:"owner,omitempty" bson:"owner,omitempty"`
-	Buildings 	map[string][]Building `json:"buildings,omitempty" bson:"buildings,omitempty"`
-	Grid        [][]*Building       `json:"grid,omitempty" bson:"grid,omitempty"`
+	ID          			primitive.ObjectID 		`json:"id,omitempty" bson:"_id"`
+	Owner       			primitive.ObjectID 		`json:"owner,omitempty" bson:"owner,omitempty"`
+	PlacedBuildings 	map[string][]Building `json:"placedBuildings" bson:"placedBuildings,omitempty"`
+	PendingBuildings	map[string][]Building `json:"pendingBuildings" bson:"pendingBuildings,omitempty"`
+	Grid        			[][]*Building       	`json:"grid,omitempty" bson:"grid,omitempty"`
 }
 
 func NewBase(user_id primitive.ObjectID) *Base {
-	tower := Building{
-		Name:     "tower",
-		IsPlaced: true,
-		PosX:     0,
-		PosY:     0,
-		PosZ:     0,
-		Width:    10, // Set the width of the tower (adjust as needed)
-		Height:   10, // Set the height of the tower (adjust as needed)
-	}
-
 	// Create the grid and initialize it with nil values
 	gridWidth := 100 // Set the width of the grid (adjust as needed)
 	gridHeight := 100 // Set the height of the grid (adjust as needed)
@@ -38,26 +29,21 @@ func NewBase(user_id primitive.ObjectID) *Base {
 		grid[i] = make([]*Building, gridWidth)
 	}
 
-	// Calculate the middle of the grid
-	middleX := gridWidth / 2
-	middleZ := gridHeight / 2
-
-	// Calculate the initial position of the tower to place it in the middle
-	tower.PosX = float64(middleX) - tower.Width/2
-	tower.PosZ = float64(middleZ) - tower.Height/2
-
 	base := &Base{
 		ID:        primitive.NewObjectID(),
 		Owner:     user_id,
 		Grid: 		 grid,
-		Buildings: make(map[string][]Building),
+		PlacedBuildings: make(map[string][]Building),
+		PendingBuildings: make(map[string][]Building),
 	}
 
-	// Add the tower to the building
-	err := base.AddBuildingToBase(&tower)
+	buildings, err := GenerateNextLevelBuildings(1)
 	if err != nil {
-		log.Panic(err)
+		fmt.Println(err)
+		return nil
 	}
+
+	base.addToPendingBuildings(buildings)
 
 	return base
 }
@@ -127,18 +113,12 @@ func (base *Base) AddBuildingToBase(building *Building) error {
 	if err := base.ValidateBuildingPlacement(building); err != nil {
 		return err
 	}
-	building.IsPlaced = true
 
-	err := base.addToBuildings(building)
-	if err != nil {
-		building.IsPlaced = false
-		return err
-	}
+	base.addToPlacedBuildings(building)
 
-	err = base.placeBuildingOnGrid(building)
+	err := base.placeBuildingOnGrid(building)
 	if err != nil {
-		building.IsPlaced = false
-		base.removeFromBuildings(building)
+		base.removeFromPlacedBuildings(building)
 		return err
 	}
 
@@ -151,17 +131,16 @@ func (base *Base) RemoveBuildingFromBase(building *Building) error {
 		return err
 	}
 
-	err, removedBuilding := base.removeFromBuildings(building)
+	err, _ := base.removeFromPlacedBuildings(building)
 	if err != nil {
 		return err
 	}
 
-	err, removedBuilding  = base.removeBuildingFromGrid(building)
+	err, _  = base.removeBuildingFromGrid(building)
 	if err != nil {
-		base.addToBuildings(building)
+		base.addToPlacedBuildings(building)
 		return err
 	}
-	removedBuilding.IsPlaced = false
 
 	return nil
 }
@@ -206,35 +185,72 @@ func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) (error, *Bu
 	return nil, removedBuilding
 }
 
-// Add a new building to the Buildings map
-func (base *Base) addToBuildings(newBuilding *Building) error {
+func (base *Base) addToPlacedBuildings(newBuilding *Building) {
+	base.PlacedBuildings = addToBuildingsMap(newBuilding, base.PlacedBuildings)
+}
+
+func (base *Base) addToPendingBuildings(newBuildings []*Building) {
+	for _, building := range newBuildings {
+		base.PendingBuildings = addToBuildingsMap(building, base.PendingBuildings)
+	}
+}
+
+// Add a new building to a buildings map
+func addToBuildingsMap(newBuilding *Building, buildings map[string][]Building) map[string][]Building{
+
+	if buildings == nil {
+		buildings = make(map[string][]Building)
+	}
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(newBuilding.Name)
 	
-	if existingBuildings, ok := base.Buildings[buildingType]; ok {
+	if existingBuildings, ok := buildings[buildingType]; ok {
 			// If the building type exists, append the new building to the existing slice
-			base.Buildings[buildingType] = append(existingBuildings, *newBuilding)
+			buildings[buildingType] = append(existingBuildings, *newBuilding)
 	} else {
 			// If the building type doesn't exist, create a new entry in the map
-			base.Buildings[buildingType] = []Building{*newBuilding}
+			buildings[buildingType] = []Building{*newBuilding}
 	}
-	return nil
+
+	return buildings
 }
 
-// Remove a building from the Buildings map
-func (base *Base) removeFromBuildings(buildingToRemove *Building) (error, *Building) {
+// Remove a building from the PlacedBuildings map
+func (base *Base) removeFromPlacedBuildings(buildingToRemove *Building) (error, *Building) {
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(buildingToRemove.Name)
-	if existingBuildings, ok := base.Buildings[buildingType]; ok {
-		for i, existingBuilding := range existingBuildings {
+	if existingPlacedBuildings, ok := base.PlacedBuildings[buildingType]; ok {
+		for i, existingBuilding := range existingPlacedBuildings {
 			// Check if the existing building is the one to be removed
 			if existingBuilding.Equal(buildingToRemove) {
 				// Remove the building by slicing it out of the slice
-				base.Buildings[buildingType] = append(existingBuildings[:i], existingBuildings[i+1:]...)
-				return nil, &existingBuildings[i]
+				base.PlacedBuildings[buildingType] = append(existingPlacedBuildings[:i], existingPlacedBuildings[i+1:]...)
+				return nil, &existingPlacedBuildings[i]
 			}
 		}
 	}
 	// Building type not found in the map, return an error
 	return fmt.Errorf("Building type '%s' not found in the map", buildingType), nil
+}
+
+// GenerateNextLevelBuildings generates the buildings available for the next level.
+func GenerateNextLevelBuildings(currentLevel int) ([]*Building, error) {
+	levelBuildings, err := helpers.ReadLevelBuildings()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, lb := range levelBuildings {
+		if lb.Level == currentLevel {
+			// Create Building objects based on lb.Buildings
+			// Add these Building objects to a slice and return it
+			var nextLevelBuildings []*Building
+			for _, buildingName := range lb.Buildings {
+				b := &Building{ Name: buildingName}
+				nextLevelBuildings = append(nextLevelBuildings, b)
+			}
+			return nextLevelBuildings, nil
+		}
+	}
+	return nil, fmt.Errorf("No available buildings for the next level")
 }

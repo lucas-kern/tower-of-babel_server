@@ -18,8 +18,8 @@ import (
 // SignedDetails
 type SignedDetails struct {
 	Email      string
-	First_name string
-	Last_name  string
+	FirstName string
+	LastName  string
 	Uid        string
 	jwt.StandardClaims
 }
@@ -30,8 +30,8 @@ var SECRET_KEY string = os.Getenv("SECRET_KEY")
 func GenerateAllTokens(email string, firstName string, lastName string, uid string) (signedToken string, signedRefreshToken string, err error) {
     claims := &SignedDetails{
         Email:      email,
-        First_name: firstName,
-        Last_name:  lastName,
+        FirstName: firstName,
+        LastName:  lastName,
         Uid:        uid,
         StandardClaims: jwt.StandardClaims{
             ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
@@ -88,7 +88,8 @@ func ValidateToken(userCollection model.Collection, signedToken string) (claims 
 	}
 	
 	//Check that user from token matches the one in DB
-	err = userCollection.FindOne(foundUser, ctx, bson.M{"user_id": claims.Uid})
+	Id, err := primitive.ObjectIDFromHex(claims.Uid)
+	err = userCollection.FindOne(foundUser, ctx, bson.M{"_id": Id})
 	if err != nil {
 		msg = "error fetching user from the database"
 		return
@@ -109,18 +110,19 @@ func UpdateAllTokens(userCollection model.Collection, signedToken string, signed
 	var updateObj primitive.D
 
 	updateObj = append(updateObj, bson.E{"token", signedToken})
-	updateObj = append(updateObj, bson.E{"refresh_token", signedRefreshToken})
+	updateObj = append(updateObj, bson.E{"refreshToken", signedRefreshToken})
 
-	Updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	updateObj = append(updateObj, bson.E{"updated_at", Updated_at})
+	UpdatedAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	updateObj = append(updateObj, bson.E{"updated_at", UpdatedAt})
 
 	upsert := true
-	filter := bson.M{"user_id": userId}
+	Id, err := primitive.ObjectIDFromHex(userId)
+	filter := bson.M{"_id": Id}
 	opt := options.UpdateOptions{
 			Upsert: &upsert,
 	}
 
-	_, err := userCollection.UpdateOne(
+	_, err = userCollection.UpdateOne(
 			ctx,
 			filter,
 			bson.D{

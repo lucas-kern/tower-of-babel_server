@@ -92,12 +92,19 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 	user.Password = &password
 
 	//TODO sanitize input before inserting into DB to avoid NoSQL injection
-	user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	user.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	user.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	user.ID = primitive.NewObjectID()
-	token, refreshToken, _ := auth.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, user.ID.Hex())
+	token, refreshToken, _ := auth.GenerateAllTokens(*user.Email, *user.FirstName, *user.LastName, user.ID.Hex())
 	user.Token = &token
-	user.Refresh_token = &refreshToken
+	user.RefreshToken = &refreshToken
+
+	base := model.NewBase(user.ID)
+	if base == nil {
+		log.Println("Base was not created due to error in new base method")
+		WriteErrorResponse(w, 502, "There was an error connecting with the server")
+		return
+	}
 
 	_, insertErr := userCollection.InsertOne(ctx, user)
 	if insertErr != nil {
@@ -106,8 +113,7 @@ func (env *HandlerEnv) SignUp(w http.ResponseWriter, r *http.Request, _ httprout
 			return
 	}
 	defer cancel()
-
-	base := model.NewBase(user.ID)
+	
 	_, insertErr = baseCollection.InsertOne(ctx, base)
 	if insertErr != nil {
 			log.Println("Base item was not created")
@@ -168,7 +174,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
-	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.ID.Hex())
+	token, refreshToken, _ := auth.GenerateAllTokens(*foundUser.Email, *foundUser.FirstName, *foundUser.LastName, foundUser.ID.Hex())
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, foundUser.ID.Hex())
 
@@ -182,7 +188,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 
 	clientUser := model.NewUser(foundUser)
 	clientUser.Token = &token
-	clientUser.Refresh_token = &refreshToken
+	clientUser.RefreshToken = &refreshToken
 	clientUser.Base = foundUserBase
 
 	WriteSuccessResponse(w, clientUser)
@@ -190,7 +196,7 @@ func (env *HandlerEnv) Login(w http.ResponseWriter, r *http.Request, _ httproute
 
 func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var userCollection model.Collection = env.database.GetUsers()
-	clientToken := r.Header.Get("refresh_token")
+	clientToken := r.Header.Get("refreshToken")
 	if clientToken == "" {
 			log.Printf("There is no refresh token")
 
@@ -203,12 +209,12 @@ func (env *HandlerEnv) TokenRefresh(w http.ResponseWriter, r *http.Request, ps h
 			return
 	}
 	
-	token, refreshToken, _ := auth.GenerateAllTokens(claims.Email, claims.First_name, claims.Last_name, claims.Uid)
+	token, refreshToken, _ := auth.GenerateAllTokens(claims.Email, claims.FirstName, claims.LastName, claims.Uid)
 
 	auth.UpdateAllTokens(userCollection, token, refreshToken, claims.Uid)
 
 	var user model.ClientUser
-	user.Refresh_token = &refreshToken
+	user.RefreshToken = &refreshToken
 	user.Token = &token
 
 	WriteSuccessResponse(w, user)

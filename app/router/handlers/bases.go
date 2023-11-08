@@ -55,7 +55,7 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
     }
 
     var userCollection model.Collection = env.database.GetUsers()
-    err = userCollection.FindOne(currUser, ctx, bson.M{"ID": objectID})
+    err = userCollection.FindOne(currUser, ctx, bson.M{"_id": objectID})
 
     var baseCollection model.Collection = env.database.GetBases()
     err = baseCollection.FindOne(currBase, ctx, bson.M{"owner": objectID})
@@ -77,7 +77,7 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
     update := bson.M{
         "$set": bson.M{
             "Grid": currBase.Grid,
-            "Buildings": currBase.Buildings,
+            "Buildings": currBase.PlacedBuildings,
             // Add any other fields you need to update here
         },
     }

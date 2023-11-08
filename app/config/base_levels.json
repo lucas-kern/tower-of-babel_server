@@ -1,0 +1,10 @@
+[
+  {
+    "level": 1,
+    "buildings": ["tower", "sawMill", "woodStorage"]
+  },
+  {
+    "level": 2,
+    "buildings": ["sawMill", "sawMill"]
+  }
+]

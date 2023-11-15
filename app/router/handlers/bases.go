@@ -76,8 +76,9 @@ func (env *HandlerEnv) PlaceBuilding(w http.ResponseWriter, r *http.Request, _ h
     // Define the update operation to set the "Grid" field in the base document.
     update := bson.M{
         "$set": bson.M{
-            "Grid": currBase.Grid,
-            "Buildings": currBase.PlacedBuildings,
+            "grid": currBase.Grid,
+            "placedBuildings": currBase.PlacedBuildings,
+            "pendingBuildings": currBase.PendingBuildings,
             // Add any other fields you need to update here
         },
     }

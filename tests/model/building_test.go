@@ -8,7 +8,6 @@ import (
 func TestBuildingEqual_SameBuilding(t *testing.T) {
     building1 := model.Building{
         Name:    "tower",
-        IsPlaced: true,
         PosX:    0,
         PosY:    0,
         PosZ:    0,
@@ -17,7 +16,6 @@ func TestBuildingEqual_SameBuilding(t *testing.T) {
     }
     building2 := model.Building{
         Name:    "tower",
-        IsPlaced: true,
         PosX:    0,
         PosY:    0,
         PosZ:    0,
@@ -33,7 +31,6 @@ func TestBuildingEqual_SameBuilding(t *testing.T) {
 func TestBuildingEqual_DifferentBuilding(t *testing.T) {
     building1 := model.Building{
         Name:    "tower",
-        IsPlaced: true,
         PosX:    0,
         PosY:    0,
         PosZ:    0,
@@ -42,7 +39,6 @@ func TestBuildingEqual_DifferentBuilding(t *testing.T) {
     }
     building2 := model.Building{
         Name:    "house",
-        IsPlaced: true,
         PosX:    0,
         PosY:    0,
         PosZ:    0,
@@ -58,7 +54,6 @@ func TestBuildingEqual_DifferentBuilding(t *testing.T) {
 func TestBuildingEqual_DifferentPosition(t *testing.T) {
     building1 := model.Building{
         Name:    "tower",
-        IsPlaced: true,
         PosX:    0,
         PosY:    0,
         PosZ:    0,
@@ -67,7 +62,6 @@ func TestBuildingEqual_DifferentPosition(t *testing.T) {
     }
     building2 := model.Building{
         Name:    "tower",
-        IsPlaced: true,
         PosX:    1,
         PosY:    1,
         PosZ:    1,

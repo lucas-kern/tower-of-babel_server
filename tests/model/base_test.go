@@ -6,497 +6,270 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"fmt"
+	"os"
+	"strings"
 )
 
 func TestNewBase(t *testing.T) {
-	// Create a user ID (you can replace this with your own user ID logic)
-	userID := primitive.NewObjectID()
+    // Setup
+    os.Setenv("BASE_LEVELS", "../../app/config/base_levels.json")
 
-	// Create a new base
-	base := NewBase(userID)
+    // Teardown
+    t.Cleanup(func() {
+        os.Unsetenv("BASE_LEVELS")
+    })
 
-	// Check if the base ID is set
-	if base.ID.IsZero() {
-		t.Error("Expected base ID to be set, but it's zero.")
-	}
+	owner := primitive.NewObjectID()
+	base := NewBase(owner)
 
-	// Check if the owner ID is set correctly
-	if base.Owner != userID {
-		t.Errorf("Expected base owner to be %s, but got %s", userID, base.Owner)
-	}
+	assert.NotNil(t, base, "Expected base to be not nil")
+	assert.False(t, base.ID.IsZero(), "Expected base ID to be not zero")
+	assert.Equal(t, owner, base.Owner, "Expected base owner to be equal to input owner")
+	assert.NotNil(t, base.Grid, "Expected base grid to be not nil")
+	assert.Equal(t, 100, len(base.Grid), "Expected base grid to have 100 rows")
+	assert.Equal(t, 100, len(base.Grid[0]), "Expected base grid to have 100 columns")
+	assert.NotNil(t, base.PlacedBuildings, "Expected PlacedBuildings to be not nil")
+	assert.NotNil(t, base.PendingBuildings, "Expected PendingBuildings to be not nil")
 
-	// Check if the grid is initialized correctly
-	gridWidth := 100
-	gridHeight := 100
-	if len(base.Grid) != gridHeight {
-		t.Errorf("Expected grid height to be %d, but got %d", gridHeight, len(base.Grid))
-	}
-	if len(base.Grid[0]) != gridWidth {
-		t.Errorf("Expected grid width to be %d, but got %d", gridWidth, len(base.Grid[0]))
-	}
-
-	// Check if the tower is placed at the correct position
-	middleX := gridWidth / 2
-	middleZ := gridHeight / 2
-	expectedPosX := float64(middleX) - 5 // Adjusted for tower width/2
-	expectedPosZ := float64(middleZ) - 5 // Adjusted for tower height/2
-	expectedTowerDimensions := 10.0
-
-	// Ensure the tower exists in the grid at the expected positions
-	tower := base.Grid[int(expectedPosZ)][int(expectedPosX)]
-	if tower == nil {
-		t.Error("Expected tower in the grid, but it's nil.")
+	expectedPendingBuildings := map[string][]Building{
+			"tower": {
+					Building{ Name: "tower" },
+			},
+			"sawmill": {
+					Building{ Name: "sawMill" },
+			},
+			"woodstorage": {
+				Building{ Name: "woodStorage" },
+		},
 	}
 
-	// Check if the tower's properties are set correctly
-	if tower.Name != "tower" {
-		t.Errorf("Expected tower name to be 'tower', but got '%s'", tower.Name)
-	}
-	if !tower.IsPlaced {
-		t.Error("Expected tower to be placed, but it's not.")
-	}
-	if tower.PosX != expectedPosX {
-		t.Errorf("Expected tower PosX to be %f, but got %f", expectedPosX, tower.PosX)
-	}
-	if tower.PosZ != expectedPosZ {
-		t.Errorf("Expected tower PosZ to be %f, but got %f", expectedPosZ, tower.PosZ)
-	}
-	if tower.Width != expectedTowerDimensions {
-		t.Errorf("Expected tower Width to be %f, but got %f", expectedTowerDimensions, tower.Width)
-	}
-	if tower.Height != expectedTowerDimensions {
-		t.Errorf("Expected tower Height to be %f, but got %f", expectedTowerDimensions, tower.Height)
-	}
-}
+	assert.Equal(t, len(expectedPendingBuildings), len(base.PendingBuildings), "Expected pending buildings count to match")
 
-func TestValidateBuildingPlacement_ValidPlacement(t *testing.T) {
-	// Create a base with a grid and a building placed in a valid position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-			Grid: make([][]*Building, gridHeight),
-	}
-	for i := range base.Grid {
-			base.Grid[i] = make([]*Building, gridWidth)
-	}
-	building := &Building{
-			Name:    "tower",
-			IsPlaced: true,
-			PosX:    0,
-			PosY:    0,
-			PosZ:    0,
-			Width:   2,
-			Height:  2,
-	}
+	for key, buildings := range base.PendingBuildings {
+			expectedBuildings, ok := expectedPendingBuildings[key]
+			assert.True(t, ok, "Unexpected key in PendingBuildings: %s", key)
 
-	err := base.ValidateBuildingPlacement(building)
+			assert.Equal(t, len(expectedBuildings), len(buildings), "Expected buildings count to match for key %s", key)
 
-	assert.NoError(t, err, "Expected valid placement, but got an error")
-}
-
-func TestValidateBuildingPlacement_OutOfBounds(t *testing.T) {
-	// Create a base with a grid and a building placed out of grid bounds
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-			Grid: make([][]*Building, gridHeight),
-	}
-	for i := range base.Grid {
-			base.Grid[i] = make([]*Building, gridWidth)
-	}
-	building := &Building{
-			Name:    "tower",
-			IsPlaced: true,
-			PosX:    4, // Placed at the right edge of the grid
-			PosY:    0,
-			PosZ:    0,
-			Width:   2,
-			Height:  2,
-	}
-
-	err := base.ValidateBuildingPlacement(building)
-
-	assert.Error(t, err, "Expected error for out-of-bounds placement")
-	assert.Contains(t, err.Error(), "out of grid bounds", "Expected error message about out-of-bounds placement")
-}
-
-func TestValidateBuildingPlacement_OverlapWithExistingBuilding(t *testing.T) {
-	// Create a base with a grid and a building already placed in the target position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-			Grid: make([][]*Building, gridHeight),
-	}
-	for i := range base.Grid {
-			base.Grid[i] = make([]*Building, gridWidth)
-	}
-	// Place an existing building in the target position
-	existingBuilding := &Building{
-			Name:    "tower",
-			IsPlaced: true,
-			PosX:    0,
-			PosY:    0,
-			PosZ:    0,
-			Width:   2,
-			Height:  2,
-	}
-	base.Grid[0][0] = existingBuilding
-	building := &Building{
-			Name:    "tower",
-			IsPlaced: true,
-			PosX:    0,
-			PosY:    0,
-			PosZ:    0,
-			Width:   2,
-			Height:  2,
-	}
-
-	err := base.ValidateBuildingPlacement(building)
-
-	assert.Error(t, err, "Expected error for overlapping placement")
-	assert.Contains(t, err.Error(), "overlaps with existing building", "Expected error message about overlapping placement")
-}
-
-func TestAddBuildingToBase_ValidPlacement(t *testing.T) {
-	// Create a base with a grid and a building placed in a valid position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	building := &Building{
-		Name:    "tower",
-		IsPlaced: false, // Building is not placed initially
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   2,
-		Height:  2,
-	}
-
-	err := base.AddBuildingToBase(building)
-
-	assert.NoError(t, err, "Expected valid placement, but got an error")
-	assert.True(t, building.IsPlaced, "Expected building to be placed, but it's not")
-}
-
-func TestAddBuildingToBase_OutOfBounds(t *testing.T) {
-	// Create a base with a grid and a building placed out of grid bounds
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	building := &Building{
-		Name:    "tower",
-		IsPlaced: false, // Building is not placed initially
-		PosX:    0, // Placed at the right edge of the grid
-		PosY:    0,
-		PosZ:    4,
-		Width:   2,
-		Height:  2,
-	}
-
-	err := base.AddBuildingToBase(building)
-
-	assert.Error(t, err, "Expected error for out-of-bounds placement")
-	assert.False(t, building.IsPlaced, "Expected building not to be placed")
-}
-
-func TestAddBuildingToBase_OverlapWithExistingBuilding(t *testing.T) {
-	// Create a base with a grid and an existing building placed in the target position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	// Place an existing building in the target position
-	existingBuilding := &Building{
-		Name:    "tower",
-		IsPlaced: true,
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   2,
-		Height:  2,
-	}
-	base.Grid[0][0] = existingBuilding
-	building := &Building{
-		Name:    "tower",
-		IsPlaced: false, // Building is not placed initially
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   2,
-		Height:  2,
-	}
-
-	err := base.AddBuildingToBase(building)
-
-	assert.Error(t, err, "Expected error for overlapping placement")
-	assert.False(t, building.IsPlaced, "Expected building not to be placed")
-}
-
-func TestAddBuildingToBase_BuildingInGrid(t *testing.T) {
-	// Create a base with a grid
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-			Grid:      make([][]*Building, gridHeight),
-			Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-			base.Grid[i] = make([]*Building, gridWidth)
-	}
-
-	// Create a building to add to the base
-	building := &Building{
-			Name:    "tower",
-			IsPlaced: false, // Building is not placed initially
-			PosX:    1,
-			PosY:    1,
-			PosZ:    1,
-			Width:   2,
-			Height:  2,
-	}
-
-	// Add the building to the base
-	err := base.AddBuildingToBase(building)
-	assert.NoError(t, err, "Expected no error when adding building to the base")
-
-	// Check if the building is present in the correct cells of the grid
-	startX := int(building.PosX)
-	startZ := int(building.PosZ)
-	endX := startX + int(building.Width)
-	endZ := startZ + int(building.Height)
-
-	for i := startZ; i < endZ; i++ {
-			for j := startX; j < endX; j++ {
-					assert.Equal(t, building, base.Grid[i][j], "Expected building to be in the grid cell")
+			for i, building := range buildings {
+					assert.Equal(t, expectedBuildings[i].Name, building.Name, "Expected building at index %d for key %s to match", i, key)
 			}
 	}
 }
 
-func TestAddBuildingToBase_BuildingInBuildingsMap(t *testing.T) {
-	// Create a base with an empty grid
-	gridWidth := 5
-	gridHeight := 5
+func TestValidateBuildingPlacement(t *testing.T) {
+	// Create a base with a grid and some pending buildings
 	base := &Base{
-		Grid:     make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
+			Grid: make([][]*Building, 10),
+			PendingBuildings: map[string][]Building{
+					"tower": {Building{Name: "tower"}},
+			},
 	}
 	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
+			base.Grid[i] = make([]*Building, 10)
 	}
 
-	// Create a building to add to the base
+	// Test a valid building placement
 	building := &Building{
-		Name:     "tower",
-		IsPlaced: false, // Building is not placed initially
-		PosX:     1,
-		PosY:     1,
-		PosZ:     1,
-		Width:    2,
-		Height:   2,
+			Name: "tower",
+			PosX: 5,
+			PosZ: 5,
+			Width: 2,
+			Height: 2,
+	}
+	err := base.ValidateBuildingPlacement(building)
+	assert.Nil(t, err, "Expected no error for valid building placement")
+
+	// Test a building placement that is out of grid bounds
+	building.PosX = 9
+	building.PosZ = 9
+	err = base.ValidateBuildingPlacement(building)
+	assert.NotNil(t, err, "Expected error for building placement out of grid bounds")
+
+	// Test a building placement that overlaps with an existing building
+	base.Grid[5][5] = &Building{}
+	building.PosX = 5
+	building.PosZ = 5
+	err = base.ValidateBuildingPlacement(building)
+	assert.NotNil(t, err, "Expected error for building placement that overlaps with existing building")
+
+	// Test a building placement where all buildings of this type have been placed
+	base.PendingBuildings["tower"] = nil
+	err = base.ValidateBuildingPlacement(building)
+	assert.NotNil(t, err, "Expected error for building placement where all buildings of this type have been placed")
+}
+
+func TestValidateBuildingRemoval(t *testing.T) {
+	// Create a base with a grid and a building
+	base := &Base{
+			Grid: make([][]*Building, 10),
+			PlacedBuildings: make(map[string][]Building),
+	}
+	for i := range base.Grid {
+			base.Grid[i] = make([]*Building, 10)
+	}
+	building := &Building{
+			Name: "tower",
+			PosX: 5,
+			PosZ: 5,
+			Width: 2,
+			Height: 2,
+	}
+	base.Grid[5][5] = building
+	base.Grid[5][6] = building
+	base.Grid[6][5] = building
+	base.Grid[6][6] = building
+	base.PlacedBuildings[strings.ToLower(building.Name)] = append(base.PlacedBuildings[strings.ToLower(building.Name)], *building)
+
+	// Test a valid building removal
+	err := base.ValidateBuildingRemoval(building)
+	assert.Nil(t, err, "Expected no error for valid building removal")
+
+	// Test a building removal that is out of grid bounds
+	building.PosX = 9
+	building.PosZ = 9
+	err = base.ValidateBuildingRemoval(building)
+	assert.NotNil(t, err, "Expected error for building removal out of grid bounds")
+	assert.Equal(t, fmt.Errorf("Building Placement failed: building is out of grid bounds").Error(), err.Error())
+
+	// Test a building removal where the building is not at the given location
+	building.PosX = 7
+	building.PosZ = 7
+	err = base.ValidateBuildingRemoval(building)
+	assert.NotNil(t, err, "Expected error for building removal where building is not at given location")
+	assert.Equal(t, fmt.Errorf("Building removal failed: Not same building in location").Error(), err.Error())
+
+	// Test a building removal where no buildings of this type have been placed
+	base.PlacedBuildings = map[string][]Building{}
+	err = base.ValidateBuildingRemoval(building)
+	assert.NotNil(t, err, "Expected error for building removal where no buildings of this type have been placed")
+	assert.Equal(t, fmt.Errorf("No buildings of this type have been placed.").Error(), err.Error())
+}
+
+func TestAddBuildingToBase(t *testing.T) {
+	// Create a base with a grid and some pending buildings
+	base := &Base{
+			Grid: make([][]*Building, 10),
+			PendingBuildings: map[string][]Building{
+					"tower": {Building{Name: "tower"}},
+			},
+			PlacedBuildings: make(map[string][]Building),
+	}
+	for i := range base.Grid {
+			base.Grid[i] = make([]*Building, 10)
 	}
 
+	// Test adding a valid building
+	building := &Building{
+			Name: "tower",
+			PosX: 5,
+			PosZ: 5,
+			Width: 2,
+			Height: 2,
+	}
 	err := base.AddBuildingToBase(building)
+	assert.Nil(t, err, "Expected no error for valid building addition")
+	assert.NotNil(t, base.Grid[5][5], "Expected building to be placed on grid")
+	assert.NotNil(t, base.Grid[5][6], "Expected building to be placed on grid")
+	assert.NotNil(t, base.Grid[6][5], "Expected building to be placed on grid")
+	assert.NotNil(t, base.Grid[6][6], "Expected building to be placed on grid")
+	assert.NotNil(t, base.PlacedBuildings["tower"], "Expected building to be added to PlacedBuildings")
+	assert.Equal(t, 0, len(base.PendingBuildings["tower"]), "Expected building to be removed from PendingBuildings")
+	
+	// Test adding a building that is out of grid bounds
+	building.PosX = 9
+	building.PosZ = 9
+	err = base.AddBuildingToBase(building)
+	assert.NotNil(t, err, "Expected error for building addition out of grid bounds")
 
-	// Assertions
-	assert.NoError(t, err, "Expected no error when adding building to base")
-	assert.True(t, building.IsPlaced, "Expected building to be placed")
-	assert.Contains(t, base.Buildings["tower"], *building, "Expected building to be in the Buildings map")
+	// Test adding a building where all buildings of this type have been placed
+	base.PendingBuildings["tower"] = nil
+	err = base.AddBuildingToBase(building)
+	assert.NotNil(t, err, "Expected error for building addition where all buildings of this type have been placed")
 }
 
-func TestRemoveBuildingFromBase_ValidRemoval(t *testing.T) {
-	// Create a base with a grid and a building placed in a valid position
-	gridWidth := 5
-	gridHeight := 5
+func TestRemoveBuildingFromBase(t *testing.T) {
+	// Create a base with a grid and a building
 	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
+			Grid: make([][]*Building, 10),
+			PlacedBuildings: make(map[string][]Building),
+			PendingBuildings: make(map[string][]Building),
 	}
 	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
+			base.Grid[i] = make([]*Building, 10)
 	}
-	// Place a building in the grid
 	building := &Building{
-		Name:    "tower",
-		IsPlaced: true,
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   1,
-		Height:  1,
+			Name: "tower",
+			PosX: 5,
+			PosZ: 5,
+			Width: 2,
+			Height: 2,
 	}
-	base.Buildings["tower"] = []Building{*building}
-	base.Grid[0][0] = building
+	base.Grid[5][5] = building
+	base.Grid[5][6] = building
+	base.Grid[6][5] = building
+	base.Grid[6][6] = building
+	base.PlacedBuildings[strings.ToLower(building.Name)] = append(base.PlacedBuildings[strings.ToLower(building.Name)], *building)
 
+	// Test removing a valid building
 	err := base.RemoveBuildingFromBase(building)
+	assert.Nil(t, err, "Expected no error for valid building removal")
+	assert.Nil(t, base.Grid[5][5], "Expected building to be removed from grid")
+	assert.Nil(t, base.Grid[5][6], "Expected building to be removed from grid")
+	assert.Nil(t, base.Grid[6][5], "Expected building to be removed from grid")
+	assert.Nil(t, base.Grid[6][6], "Expected building to be removed from grid")
+	assert.Equal(t, 0, len(base.PlacedBuildings["tower"]), "Expected building to be removed from PlacedBuildings")
+	assert.Equal(t, 1, len(base.PendingBuildings["tower"]), "Expected building to be added to PendingBuildings")
 
-	// Assertions
-	assert.NoError(t, err, "Expected no error when removing building from base")
-	assert.False(t, building.IsPlaced, "Expected building to be marked as not placed")
-	assert.NotContains(t, base.Buildings["tower"], *building, "Expected building to be removed from Buildings map")
+	// Test removing a building that is out of grid bounds
+	building.PosX = 9
+	building.PosZ = 9
+	err = base.RemoveBuildingFromBase(building)
+	assert.NotNil(t, err, "Expected error for building removal out of grid bounds")
+
+	// Test removing a building where no buildings of this type have been placed
+	base.PlacedBuildings = map[string][]Building{}
+	err = base.RemoveBuildingFromBase(building)
+	assert.NotNil(t, err, "Expected error for building removal where no buildings of this type have been placed")
 }
 
-func TestRemoveBuildingFromBase_BuildingNotInGrid(t *testing.T) {
-	// Create a base with an empty grid
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	// Create a building that is not in the grid
-	building := &Building{
-		Name:     "tower",
-		IsPlaced: true,
-		PosX:     0,
-		PosY:     0,
-		PosZ:     0,
-		Width:    2,
-		Height:   2,
-	}
 
-	err := base.RemoveBuildingFromBase(building)
+func TestGenerateNextLevelBuildings(t *testing.T) {
 
-	// Assertions
-	assert.Error(t, err, "Expected error when removing a building not in the grid")
-	assert.True(t, building.IsPlaced, "Expected building to remain placed")
-}
+	// Setup
+	os.Setenv("BASE_LEVELS", "../../app/config/base_levels.json")
 
-func TestRemoveBuildingFromBase_ErrorInRemoveFromBuildings(t *testing.T) {
-	// Create a base with a grid and a building placed in a valid position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	// Place a building in the grid
-	building := &Building{
-		Name:    "tower",
-		IsPlaced: true,
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   2,
-		Height:  2,
-	}
-	base.Grid[0][0] = building
+	// Teardown
+	t.Cleanup(func() {
+			os.Unsetenv("BASE_LEVELS")
+	})
 
-	err := base.RemoveBuildingFromBase(building)
+	// Test generating buildings for a level with no available buildings
+	buildings, err := GenerateNextLevelBuildings(1000) // Assuming level 1000 has no buildings
+	assert.NotNil(t, err, "Expected error for level with no available buildings")
+	assert.Nil(t, buildings, "Expected no buildings to be generated")
 
-	// Assertions
-	assert.Error(t, err, "Expected error when removing from buildings fails")
-	assert.True(t, building.IsPlaced, "Expected building to remain placed")
-}
+	// Test generating buildings for a negative level
+	buildings, err = GenerateNextLevelBuildings(-1)
+	assert.NotNil(t, err, "Expected error for negative level")
+	assert.Nil(t, buildings, "Expected no buildings to be generated")
 
-func TestRemoveBuildingFromBase_BuildingSameAsOther(t *testing.T) {
-	// Create a base with a grid and a building placed in a valid position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
-	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	// Place a building in the grid
-	building := &Building{
-		Name:    "tower",
-		IsPlaced: true,
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   1,
-		Height:  1,
-	}
-	base.Buildings["tower"] = []Building{*building}
-	base.Grid[0][0] = building
+	// Test generating buildings for a valid level
+	buildings, err = GenerateNextLevelBuildings(1)
+	assert.Nil(t, err, "Expected no error for valid level")
+	assert.NotEmpty(t, buildings, "Expected buildings to be generated")
 
-	building2 := &Building{
-		Name:    "tower",
-		IsPlaced: false,
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   1,
-		Height:  1,
+	expectedBuildings := []*Building{
+    &Building{ Name: "tower" },
+    &Building{ Name: "sawMill" },
+    &Building{ Name: "woodStorage" },
 	}
 
-	base.Buildings["tower"] = []Building{*building}
-	base.Grid[0][0] = building
+	assert.Equal(t, len(expectedBuildings), len(buildings), "Expected buildings count to match")
 
-	err := base.RemoveBuildingFromBase(building2)
-
-	// Assertions
-	assert.NoError(t, err, "Expected no error when removing building from base")
-	assert.False(t, building.IsPlaced, "Expected building to not be placed")
-	assert.False(t, building2.IsPlaced, "Expected building2 to not be placed")
-}
-
-func TestRemoveBuildingFromBase_BuildingDifferentFromOther(t *testing.T) {
-	// Create a base with a grid and a building placed in a valid position
-	gridWidth := 5
-	gridHeight := 5
-	base := &Base{
-		Grid: make([][]*Building, gridHeight),
-		Buildings: make(map[string][]Building),
+	for i, buildings := range buildings {
+		expectedBuilding := expectedBuildings[i]
+		assert.Equal(t, expectedBuilding, buildings, "Expected building at index %d for key %d to match", i, i)
 	}
-	for i := range base.Grid {
-		base.Grid[i] = make([]*Building, gridWidth)
-	}
-	// Place a building in the grid
-	building := &Building{
-		Name:    "tower",
-		IsPlaced: true,
-		PosX:    0,
-		PosY:    0,
-		PosZ:    0,
-		Width:   1,
-		Height:  1,
-	}
-	base.Buildings["tower"] = []Building{*building}
-	base.Grid[0][0] = building
-
-	building2 := &Building{
-		Name:    "test",
-		IsPlaced: true,
-		PosX:    1,
-		PosY:    0,
-		PosZ:    0,
-		Width:   1,
-		Height:  1,
-	}
-
-	base.Buildings["tower"] = []Building{*building}
-	base.Grid[0][0] = building
-
-	err := base.RemoveBuildingFromBase(building2)
-
-	// Assertions
-	assert.Error(t, err, "Expected an error of wrong building")
-	assert.True(t, building.IsPlaced, "Expected building to remain placed")
-	assert.True(t, building2.IsPlaced, "Expected building2 to remain placed")
 }

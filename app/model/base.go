@@ -43,13 +43,21 @@ func NewBase(user_id primitive.ObjectID) *Base {
 		return nil
 	}
 
-	base.addToPendingBuildings(buildings)
+	base.addMultipleBuildingsToPendingBuildings(buildings)
 
 	return base
 }
 
 // Validate that the building is able to be placed
 func (base *Base) ValidateBuildingPlacement(building *Building) error {
+
+	// Check if the map already has an entry for the building type
+	buildingType := strings.ToLower(building.Name)
+
+	if len(base.PendingBuildings[buildingType]) == 0 {
+			// If the building type doesn't exist in pending buildings then there are no more the user can place
+		return fmt.Errorf("All buildings of this type have been placed.")
+	}
 
 	// Check if base.Grid is nil or empty (no rows)
 	if base.Grid == nil || len(base.Grid) == 0  {
@@ -91,6 +99,12 @@ func (base *Base) ValidateBuildingRemoval(building *Building) error {
 	endX := startX + int(building.Width)
 	endZ := startZ + int(building.Height)
 
+	buildingType := strings.ToLower(building.Name)
+	if len(base.PlacedBuildings[buildingType]) == 0 {
+		// If the building type doesn't exist in placed buildings then there is not a building to remove
+		return fmt.Errorf("No buildings of this type have been placed.")
+	}
+
 	// Ensure the building is within the size of the grid
 	if startX < 0 || startZ < 0 || endX > gridSizeX || endZ > gridSizeZ {
 			return fmt.Errorf("Building Placement failed: building is out of grid bounds")
@@ -113,7 +127,7 @@ func (base *Base) AddBuildingToBase(building *Building) error {
 	if err := base.ValidateBuildingPlacement(building); err != nil {
 		return err
 	}
-
+	base.removeFromPendingBuildings(building)
 	base.addToPlacedBuildings(building)
 
 	err := base.placeBuildingOnGrid(building)
@@ -131,12 +145,13 @@ func (base *Base) RemoveBuildingFromBase(building *Building) error {
 		return err
 	}
 
-	err, _ := base.removeFromPlacedBuildings(building)
+	rb, err := base.removeFromPlacedBuildings(building)
 	if err != nil {
 		return err
 	}
+	base.addBuildingToPendingBuildings(rb)
 
-	err, _  = base.removeBuildingFromGrid(building)
+	base.removeBuildingFromGrid(building)
 	if err != nil {
 		base.addToPlacedBuildings(building)
 		return err
@@ -162,37 +177,38 @@ func (base *Base) placeBuildingOnGrid(building *Building) error {
 }
 
 // Remove a building from the grid of a base
-func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) (error, *Building) {
+func (base *Base) removeBuildingFromGrid(buildingToRemove *Building) (*Building) {
 	startX := int(buildingToRemove.PosX)
 	startZ := int(buildingToRemove.PosZ)
 	endX := startX + int(buildingToRemove.Width)
 	endZ := startZ + int(buildingToRemove.Height)
 
-	emptyBuilding := new(Building)
 	removedBuilding := new(Building)
 
 	for i := startZ; i < endZ; i++ {
 		for j := startX; j < endX; j++ {			
 			// Check if the current cell contains the building to remove
 				// Set the cell to an empty building
-				fmt.Println("here")
-				fmt.Println(base.Grid[i][j])
 				removedBuilding = base.Grid[i][j]
-				base.Grid[i][j] = emptyBuilding
+				base.Grid[i][j] = nil
 		}
 	}
 
-	return nil, removedBuilding
+	return removedBuilding
 }
 
 func (base *Base) addToPlacedBuildings(newBuilding *Building) {
 	base.PlacedBuildings = addToBuildingsMap(newBuilding, base.PlacedBuildings)
 }
 
-func (base *Base) addToPendingBuildings(newBuildings []*Building) {
+func (base *Base) addMultipleBuildingsToPendingBuildings(newBuildings []*Building) {
 	for _, building := range newBuildings {
 		base.PendingBuildings = addToBuildingsMap(building, base.PendingBuildings)
 	}
+}
+
+func (base *Base) addBuildingToPendingBuildings(newBuilding *Building) {
+		base.PendingBuildings = addToBuildingsMap(&Building{ Name: newBuilding.Name}, base.PendingBuildings)
 }
 
 // Add a new building to a buildings map
@@ -216,22 +232,44 @@ func addToBuildingsMap(newBuilding *Building, buildings map[string][]Building) m
 }
 
 // Remove a building from the PlacedBuildings map
-func (base *Base) removeFromPlacedBuildings(buildingToRemove *Building) (error, *Building) {
+func (base *Base) removeFromPlacedBuildings(buildingToRemove *Building) (*Building, error) {
+	removedBuilding, pb, err := removeFromBuildingsMap(buildingToRemove, base.PlacedBuildings)
+	if err != nil {
+		return nil, err
+	}
+	base.PlacedBuildings = pb
+	return removedBuilding, err
+}
+
+// Remove a building from the PendingBuildings map
+func (base *Base) removeFromPendingBuildings(buildingToRemove *Building) (*Building, error) {
+	b := &Building{ Name: buildingToRemove.Name, PosX: 0, PosY: 0, PosZ: 0}
+	removedBuilding, pb, err := removeFromBuildingsMap(b, base.PendingBuildings)
+	if err != nil {
+		return nil, err
+	}
+	base.PendingBuildings = pb
+	return removedBuilding, err
+}
+
+// Remove a building from a Buildings map
+func removeFromBuildingsMap(buildingToRemove *Building, buildings map[string][]Building) (*Building, map[string][]Building, error) {
 	// Check if the map already has an entry for the building type
 	buildingType := strings.ToLower(buildingToRemove.Name)
-	if existingPlacedBuildings, ok := base.PlacedBuildings[buildingType]; ok {
+	if existingPlacedBuildings, ok := buildings[buildingType]; ok {
 		for i, existingBuilding := range existingPlacedBuildings {
 			// Check if the existing building is the one to be removed
 			if existingBuilding.Equal(buildingToRemove) {
 				// Remove the building by slicing it out of the slice
-				base.PlacedBuildings[buildingType] = append(existingPlacedBuildings[:i], existingPlacedBuildings[i+1:]...)
-				return nil, &existingPlacedBuildings[i]
+				buildings[buildingType] = append(existingPlacedBuildings[:i], existingPlacedBuildings[i+1:]...)
+				return &existingPlacedBuildings[i], buildings, nil
 			}
 		}
 	}
 	// Building type not found in the map, return an error
-	return fmt.Errorf("Building type '%s' not found in the map", buildingType), nil
+	return nil, nil, fmt.Errorf("Building type '%s' not found in the map", buildingType)
 }
+
 
 // GenerateNextLevelBuildings generates the buildings available for the next level.
 func GenerateNextLevelBuildings(currentLevel int) ([]*Building, error) {
